@@ -40,7 +40,7 @@ function App() {
     showInput: true,
   });
 
-  let CtrlOrCmd: KbdKey = type() === "macos" ? "Meta" : "Control";
+  let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
 
   // Create shortcuts for profile open and save
   createShortcut(
