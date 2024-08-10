@@ -10,13 +10,6 @@
   },
   "app": {
     "windows": [
-      {
-        "title": "Mini METARs",
-        "width": 250,
-        "height": 58,
-        "alwaysOnTop": true,
-        "decorations": false
-      }
     ],
     "security": {
       "csp": null

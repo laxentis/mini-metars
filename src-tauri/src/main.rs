@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
-use tauri::State;
+use tauri::{State, WebviewWindowBuilder};
 use tokio::sync::OnceCell;
 use vatsim_utils::errors::VatsimUtilError;
 use vatsim_utils::live_api::Vatsim;
@@ -87,6 +87,20 @@ fn main() {
             profiles::load_profile,
             profiles::save_profile
         ])
+        .setup(|app| {
+            let window_builder =
+                WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
+                    .title("Mini METARs")
+                    .inner_size(250.0, 58.0)
+                    .always_on_top(true);
+
+            // Use custom titlebar on windows only
+            #[cfg(target_os = "windows")]
+            let window_builder = window_builder.decorations(false);
+
+            let window = window_builder.build().unwrap();
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
