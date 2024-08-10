@@ -82,7 +82,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             fetch_metar,
             lookup_station,
-            get_atis_letter,
+            get_atis,
             profiles::load_profile,
             profiles::save_profile
         ])
@@ -128,8 +128,17 @@ async fn lookup_station(id: &str, state: State<'_, LockedState>) -> Result<Stati
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct FetchAtisResponse {
+    pub letter: String,
+    pub texts: Vec<String>,
+}
+
 #[tauri::command]
-async fn get_atis_letter(icao_id: &str, state: State<'_, LockedState>) -> Result<String, String> {
+async fn get_atis(
+    icao_id: &str,
+    state: State<'_, LockedState>,
+) -> Result<FetchAtisResponse, String> {
     if datafeed_is_stale(&state) {
         let new_data = Some(VatsimDataFetch::new(fetch_vatsim_data(&state).await));
         *state.latest_vatsim_data.lock().unwrap() = new_data;
@@ -146,16 +155,22 @@ async fn get_atis_letter(icao_id: &str, state: State<'_, LockedState>) -> Result
                     .collect();
 
                 let letter_str: String = match found_atis.len() {
+                    0 => "-".to_string(),
                     1 => parse_atis_code(found_atis[0]),
-                    2 => format!(
+                    _ => format!(
                         "{}/{}",
                         filter_callsign_and_parse(&found_atis, "_A_"),
                         filter_callsign_and_parse(&found_atis, "_D_")
                     ),
-                    _ => "-".to_string(),
                 };
 
-                Ok(letter_str)
+                Ok(FetchAtisResponse {
+                    letter: letter_str,
+                    texts: found_atis
+                        .iter()
+                        .filter_map(|a| a.text_atis.as_ref().map(|t| t.join(" ")))
+                        .collect(),
+                })
             },
         )
     } else {

@@ -1,6 +1,7 @@
-import { Component, createSignal, onCleanup, onMount, Setter, Show } from "solid-js";
-import { lookupStationCmd, updateAtisLetterCmd, updateMetarCmd } from "./tauri.ts";
+import { Component, createSignal, For, onCleanup, onMount, Setter, Show } from "solid-js";
+import { lookupStationCmd, updateAtisCmd, updateMetarCmd } from "./tauri.ts";
 import { logIfDev } from "./logging.ts";
+import { createStore } from "solid-js/store";
 
 interface MetarProps {
   requestedId: string;
@@ -26,6 +27,8 @@ export const Metar: Component<MetarProps> = (props) => {
   const [rawMetar, setRawMetar] = createSignal("");
   const [showFullMetar, setShowFullMetar] = createSignal(false);
   const [atisLetter, setAtisLetter] = createSignal("-");
+  const [atisTexts, setAtisTexts] = createStore<string[]>([]);
+  const [showAtisTexts, setShowAtisTexts] = createSignal(false);
 
   // Update handle
   const [metarTimerHandle, setMetarTimerHandle] = createSignal(-1);
@@ -68,16 +71,17 @@ export const Metar: Component<MetarProps> = (props) => {
     }
   };
 
-  const updateAtisLetter = async () => {
+  const updateAtis = async () => {
     if (!validId()) {
       return;
     }
 
     try {
       logIfDev("Starting ATIS letter fetch for id", icaoId());
-      let res = await updateAtisLetterCmd(icaoId());
+      let res = await updateAtisCmd(icaoId());
       logIfDev("Retrieved ATIS Letter", res);
-      setAtisLetter(res);
+      setAtisLetter(res.letter);
+      setAtisTexts(res.texts);
     } catch (error) {
       console.log(error);
     }
@@ -90,8 +94,8 @@ export const Metar: Component<MetarProps> = (props) => {
         await updateMetar();
         setMetarTimerHandle(setInterval(updateMetar, 1000 * getRandomInt(120, 150)));
 
-        await updateAtisLetter();
-        setLetterTimerHandle(setInterval(updateAtisLetter, 1000 * getRandomInt(60, 90)));
+        await updateAtis();
+        setLetterTimerHandle(setInterval(updateAtis, 1000 * getRandomInt(60, 90)));
       }
     } catch (error) {
       console.log(error);
@@ -108,24 +112,42 @@ export const Metar: Component<MetarProps> = (props) => {
     }
   });
 
+  const toggleWithResize = async (setter: Setter<boolean>) => {
+    props.scrollbarHide(true);
+    setter((prev) => !prev);
+    await props.resizeFn();
+    props.scrollbarHide(false);
+  };
+
+  const toggleShowMetar = async () => {
+    await toggleWithResize(setShowFullMetar);
+  };
+
+  const toggleShowAtisTexts = async () => {
+    await toggleWithResize(setShowAtisTexts);
+  };
+
   return (
-    <div
-      class="flex flex-col mx-1 select-none cursor-pointer"
-      onClick={async () => {
-        props.scrollbarHide(true);
-        setShowFullMetar((prev) => !prev);
-        await props.resizeFn();
-        props.scrollbarHide(false);
-      }}
-    >
+    <div class="flex flex-col mx-1 select-none cursor-pointer">
       <div class="flex font-mono text-sm">
         <div class="w-8">{displayId()}</div>
-        <div class="w-10 text-center">{atisLetter()}</div>
-        <div class="w-16 text-center">{altimeter()}</div>
-        <div class="flex-grow">{wind()}</div>
+        <div class="w-10 text-center" onClick={toggleShowAtisTexts}>
+          {atisLetter()}
+        </div>
+        <div class="w-16 text-center" onClick={toggleShowMetar}>
+          {altimeter()}
+        </div>
+        <div class="flex-grow" onClick={toggleShowMetar}>
+          {wind()}
+        </div>
       </div>
       <Show when={showFullMetar() && rawMetar() !== ""}>
         <div class="text-xs mb-1 text-gray-400">{rawMetar()}</div>
+      </Show>
+      <Show when={showAtisTexts()}>
+        <For each={atisTexts}>
+          {(atisText) => <div class="text-xs mb-1 text-gray-400">{atisText}</div>}
+        </For>
       </Show>
     </div>
   );

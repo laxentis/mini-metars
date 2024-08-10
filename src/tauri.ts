@@ -63,6 +63,11 @@ interface FetchMetarResponse {
   altimeter: number;
 }
 
+interface FetchAtisResponse {
+  letter: string;
+  texts: string[];
+}
+
 interface Profile {
   name: string;
   stations: string[];
@@ -79,8 +84,8 @@ const updateMetarCmd = (id: string): Promise<FetchMetarResponse> =>
 
 const lookupStationCmd = (id: string): Promise<Station> => invoke("lookup_station", { id: id });
 
-const updateAtisLetterCmd = (id: string): Promise<string> =>
-  invoke("get_atis_letter", { icaoId: id });
+const updateAtisCmd = (id: string): Promise<FetchAtisResponse> =>
+  invoke("get_atis", { icaoId: id });
 
 const loadProfileCmd = (): Promise<Profile> => invoke("load_profile", {});
 
@@ -95,7 +100,7 @@ const saveSettingsCmd = (settings: Settings): Promise<void> =>
 export {
   updateMetarCmd,
   lookupStationCmd,
-  updateAtisLetterCmd,
+  updateAtisCmd,
   loadProfileCmd,
   saveProfileCmd,
   loadSettingsCmd,
