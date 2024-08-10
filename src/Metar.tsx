@@ -1,12 +1,13 @@
 import { Component, createSignal, For, onCleanup, onMount, Setter, Show } from "solid-js";
 import { lookupStationCmd, updateAtisCmd, updateMetarCmd } from "./tauri.ts";
 import { logIfDev } from "./logging.ts";
-import { createStore } from "solid-js/store";
+import { createStore, SetStoreFunction } from "solid-js/store";
+import { MainUiStore } from "./App.tsx";
 
 interface MetarProps {
   requestedId: string;
   resizeFn: () => Promise<void>;
-  scrollbarHide: Setter<boolean>;
+  mainUiSetter: SetStoreFunction<MainUiStore>;
 }
 
 function getRandomInt(min: number, max: number) {
@@ -113,10 +114,10 @@ export const Metar: Component<MetarProps> = (props) => {
   });
 
   const toggleWithResize = async (setter: Setter<boolean>) => {
-    props.scrollbarHide(true);
+    props.mainUiSetter("showScroll", false);
     setter((prev) => !prev);
     await props.resizeFn();
-    props.scrollbarHide(false);
+    props.mainUiSetter("showScroll", true);
   };
 
   const toggleShowMetar = async () => {

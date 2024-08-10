@@ -1,6 +1,6 @@
 import "./styles.css";
 import { Metar } from "./Metar.tsx";
-import { batch, createSignal, For } from "solid-js";
+import { batch, createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 // @ts-ignore
 import { autofocus } from "@solid-primitives/autofocus";
@@ -12,6 +12,11 @@ import { loadProfileCmd, Profile, saveProfileCmd } from "./tauri.ts";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
   return [...array.slice(0, index), ...array.slice(index + 1)];
+}
+
+export interface MainUiStore {
+  showScroll: boolean;
+  showInput: boolean;
 }
 
 function App() {
@@ -31,6 +36,10 @@ function App() {
   // Main signals for IDs and input
   const [inputId, setInputId] = createSignal("");
   const [ids, setIds] = createStore<string[]>([]);
+  const [mainUi, setMainUi] = createStore<MainUiStore>({
+    showScroll: true,
+    showInput: true,
+  });
 
   // Create shortcuts for profile open and save
   createShortcut(
@@ -58,7 +67,21 @@ function App() {
     { preventDefault: true, requireReset: true }
   );
 
-  const [hideScroll, setHideScroll] = createSignal(false);
+  // Create shortcuts to toggle input box
+  const toggleInput = async () => {
+    setMainUi("showScroll", false);
+    setMainUi("showInput", (prev) => !prev);
+    await resetWindowHeight();
+    setMainUi("showScroll", true);
+  };
+  createShortcut(["Control", "+"], toggleInput, {
+    preventDefault: true,
+    requireReset: false,
+  });
+  createShortcut(["Control", "Shift", "+"], toggleInput, {
+    preventDefault: true,
+    requireReset: false,
+  });
 
   async function resetWindowHeight() {
     if (containerRef !== undefined) {
@@ -74,15 +97,15 @@ function App() {
   }
 
   async function loadStationsFromProfile(p: Profile) {
-    setHideScroll(true);
+    setMainUi("showScroll", false);
     setIds(p.stations);
     await resetWindowHeight();
-    setHideScroll(false);
+    setMainUi("showScroll", true);
   }
 
   async function addStation(e: SubmitEvent) {
     e.preventDefault();
-    setHideScroll(true);
+    setMainUi("showScroll", false);
     batch(() => {
       if (inputId().length >= 3 && inputId().length <= 4) {
         setIds(ids.length, inputId());
@@ -90,7 +113,7 @@ function App() {
       }
     });
     await resetWindowHeight();
-    setHideScroll(false);
+    setMainUi("showScroll", true);
   }
 
   async function removeStation(index: number) {
@@ -102,8 +125,8 @@ function App() {
     <div
       class={clsx({
         "pt-[24px] h-screen": true,
-        "overflow-auto": !hideScroll(),
-        "overflow-hidden": hideScroll(),
+        "overflow-auto": mainUi.showScroll,
+        "overflow-hidden": !mainUi.showScroll,
       })}
     >
       <div class="flex flex-col bg-black text-white" ref={containerRef}>
@@ -125,28 +148,26 @@ function App() {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
                   </svg>
                 </div>
-                <Metar
-                  requestedId={id}
-                  resizeFn={resetWindowHeight}
-                  scrollbarHide={setHideScroll}
-                />
+                <Metar requestedId={id} resizeFn={resetWindowHeight} mainUiSetter={setMainUi} />
               </div>
             )}
           </For>
-          <form onSubmit={async (e) => addStation(e)}>
-            <input
-              id="stationId"
-              name="stationId"
-              type="text"
-              class="w-16 text-white font-mono bg-gray-900 mx-1 my-1 border-gray-700 border focus:outline-none focus:border-gray-500 px-1 rounded"
-              value={inputId()}
-              onInput={(e) => setInputId(e.currentTarget.value)}
-              use:autofocus
-              autofocus
-              formNoValidate
-              autocomplete="off"
-            />
-          </form>
+          <Show when={mainUi.showInput}>
+            <form onSubmit={async (e) => addStation(e)}>
+              <input
+                id="stationId"
+                name="stationId"
+                type="text"
+                class="w-16 text-white font-mono bg-gray-900 mx-1 my-1 border-gray-700 border focus:outline-none focus:border-gray-500 px-1 rounded"
+                value={inputId()}
+                onInput={(e) => setInputId(e.currentTarget.value)}
+                use:autofocus
+                autofocus
+                formNoValidate
+                autocomplete="off"
+              />
+            </form>
+          </Show>
         </div>
       </div>
     </div>
