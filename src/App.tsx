@@ -7,8 +7,9 @@ import { autofocus } from "@solid-primitives/autofocus";
 import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { logIfDev } from "./logging.ts";
 import { clsx } from "clsx";
-import { createShortcut } from "@solid-primitives/keyboard";
+import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 import { loadProfileCmd, Profile, saveProfileCmd } from "./tauri.ts";
+import { type } from "@tauri-apps/plugin-os";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
   return [...array.slice(0, index), ...array.slice(index + 1)];
@@ -41,9 +42,11 @@ function App() {
     showInput: true,
   });
 
+  let CtrlOrCmd: KbdKey = type() === "macos" ? "Meta" : "Control";
+
   // Create shortcuts for profile open and save
   createShortcut(
-    ["Control", "O"],
+    [CtrlOrCmd, "O"],
     async () => {
       try {
         let p = await loadProfileCmd();
@@ -55,7 +58,7 @@ function App() {
     { preventDefault: true, requireReset: true }
   );
   createShortcut(
-    ["Control", "S"],
+    [CtrlOrCmd, "S"],
     async () => {
       try {
         let p: Profile = { name: "", stations: ids };
@@ -74,11 +77,11 @@ function App() {
     await resetWindowHeight();
     setMainUi("showScroll", true);
   };
-  createShortcut(["Control", "+"], toggleInput, {
+  createShortcut([CtrlOrCmd, "+"], toggleInput, {
     preventDefault: true,
     requireReset: false,
   });
-  createShortcut(["Control", "Shift", "+"], toggleInput, {
+  createShortcut([CtrlOrCmd, "Shift", "+"], toggleInput, {
     preventDefault: true,
     requireReset: false,
   });

@@ -24,6 +24,7 @@ vatsim_utils = "0.5.1"
 regex = "1.10.5"
 dirs = "5.0.1"
 tauri-plugin-dialog = "2.0.0-beta.12"
+tauri-plugin-os = "2.0.0-rc.0"
 
 # Optimize for smaller binary size
 [profile.release]

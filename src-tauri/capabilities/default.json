@@ -18,6 +18,7 @@
     "window:allow-set-size",
     "window:allow-start-dragging",
     "window:allow-close",
-    "window:allow-minimize"
+    "window:allow-minimize",
+    "os:allow-os-type"
   ]
 }
