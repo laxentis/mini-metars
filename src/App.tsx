@@ -10,6 +10,7 @@ import { clsx } from "clsx";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 import { loadProfileCmd, Profile, saveProfileCmd } from "./tauri.ts";
 import { type } from "@tauri-apps/plugin-os";
+import { CustomTitlebar } from "./CustomTitlebar.tsx";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
   return [...array.slice(0, index), ...array.slice(index + 1)];
@@ -24,10 +25,15 @@ function App() {
   // Window basics
   let containerRef: HTMLDivElement | undefined;
   let window = getCurrentWindow();
+  let useCustomTitlebar = type() === "windows";
 
-  // Setup titlebar
-  document.getElementById("titlebar-minimize")?.addEventListener("click", () => window.minimize());
-  document.getElementById("titlebar-close")?.addEventListener("click", () => window.close());
+  if (useCustomTitlebar) {
+    // Setup titlebar
+    document
+      .getElementById("titlebar-minimize")
+      ?.addEventListener("click", () => window.minimize());
+    document.getElementById("titlebar-close")?.addEventListener("click", () => window.close());
+  }
 
   // Prevent right-click in prod
   if (import.meta.env.PROD) {
@@ -125,52 +131,58 @@ function App() {
   }
 
   return (
-    <div
-      class={clsx({
-        "pt-[24px] h-screen": true,
-        "overflow-auto": mainUi.showScroll,
-        "overflow-hidden": !mainUi.showScroll,
-      })}
-    >
-      <div class="flex flex-col bg-black text-white" ref={containerRef}>
-        <div class="flex flex-col grow">
-          <For each={ids}>
-            {(id, i) => (
-              <div class="flex">
-                <div
-                  class="flex w-4 h-5 items-center cursor-pointer"
-                  onClick={async () => removeStation(i())}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    class="size-4 stroke-red-700 hover:stroke-red-500 transition-colors"
+    <div>
+      <Show when={useCustomTitlebar}>
+        <CustomTitlebar />
+      </Show>
+      <div
+        class={clsx({
+          "h-screen": true,
+          "pt-[24px]": useCustomTitlebar,
+          "overflow-auto": mainUi.showScroll,
+          "overflow-hidden": !mainUi.showScroll,
+        })}
+      >
+        <div class="flex flex-col bg-black text-white" ref={containerRef}>
+          <div class="flex flex-col grow">
+            <For each={ids}>
+              {(id, i) => (
+                <div class="flex">
+                  <div
+                    class="flex w-4 h-5 items-center cursor-pointer"
+                    onClick={async () => removeStation(i())}
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
-                  </svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      class="size-4 stroke-red-700 hover:stroke-red-500 transition-colors"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
+                    </svg>
+                  </div>
+                  <Metar requestedId={id} resizeFn={resetWindowHeight} mainUiSetter={setMainUi} />
                 </div>
-                <Metar requestedId={id} resizeFn={resetWindowHeight} mainUiSetter={setMainUi} />
-              </div>
-            )}
-          </For>
-          <Show when={mainUi.showInput}>
-            <form onSubmit={async (e) => addStation(e)}>
-              <input
-                id="stationId"
-                name="stationId"
-                type="text"
-                class="w-16 text-white font-mono bg-gray-900 mx-1 my-1 border-gray-700 border focus:outline-none focus:border-gray-500 px-1 rounded"
-                value={inputId()}
-                onInput={(e) => setInputId(e.currentTarget.value)}
-                use:autofocus
-                autofocus
-                formNoValidate
-                autocomplete="off"
-              />
-            </form>
-          </Show>
+              )}
+            </For>
+            <Show when={mainUi.showInput}>
+              <form onSubmit={async (e) => addStation(e)}>
+                <input
+                  id="stationId"
+                  name="stationId"
+                  type="text"
+                  class="w-16 text-white font-mono bg-gray-900 mx-1 my-1 border-gray-700 border focus:outline-none focus:border-gray-500 px-1 rounded"
+                  value={inputId()}
+                  onInput={(e) => setInputId(e.currentTarget.value)}
+                  use:autofocus
+                  autofocus
+                  formNoValidate
+                  autocomplete="off"
+                />
+              </form>
+            </Show>
+          </div>
         </div>
       </div>
     </div>
