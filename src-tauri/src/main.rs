@@ -94,11 +94,11 @@ fn main() {
                     .inner_size(250.0, 58.0)
                     .always_on_top(true);
 
-            // Use custom titlebar on windows only
+            // Use custom titlebar on Windows only
             #[cfg(target_os = "windows")]
             let window_builder = window_builder.decorations(false);
 
-            let window = window_builder.build().unwrap();
+            let _ = window_builder.build().unwrap();
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -246,7 +246,7 @@ fn datafeed_is_stale(state: &State<'_, LockedState>) -> bool {
         .as_ref()
         .map_or_else(
             || true,
-            |fetch| fetch.fetched_time.elapsed() > Duration::from_secs(60),
+            |fetch| fetch.fetched_time.elapsed() > Duration::from_secs(30),
         )
 }
 
