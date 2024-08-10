@@ -41,6 +41,7 @@ function App() {
   });
 
   let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
+  let PlusOrEquals = type() === "macos" || type() === "ios" ? "=" : "+";
 
   // Create shortcuts for profile open and save
   createShortcut(
@@ -79,7 +80,7 @@ function App() {
     preventDefault: true,
     requireReset: false,
   });
-  createShortcut([CtrlOrCmd, "Shift", "+"], toggleInput, {
+  createShortcut([CtrlOrCmd, "Shift", PlusOrEquals], toggleInput, {
     preventDefault: true,
     requireReset: false,
   });
