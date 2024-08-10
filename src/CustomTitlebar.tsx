@@ -1,13 +1,16 @@
 import { Component } from "solid-js";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export const CustomTitlebar: Component = () => {
+  let window = getCurrentWindow();
+
   return (
     <div>
       <div
-        data-tauri-drag-region
+        data-tauri-drag-region=""
         class="select-none bg-gray-800 h-[24px] flex justify-end fixed top-0 left-0 right-0 items-center"
       >
-        <div id="titlebar-minimize" class="mr-3">
+        <div id="titlebar-minimize" class="mr-3" onClick={() => window.minimize()}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -19,7 +22,7 @@ export const CustomTitlebar: Component = () => {
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
           </svg>
         </div>
-        <div id="titlebar-close" class="mr-1">
+        <div id="titlebar-close" class="mr-1" onClick={() => window.close()}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"

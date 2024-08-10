@@ -27,14 +27,6 @@ function App() {
   let window = getCurrentWindow();
   let useCustomTitlebar = type() === "windows";
 
-  if (useCustomTitlebar) {
-    // Setup titlebar
-    document
-      .getElementById("titlebar-minimize")
-      ?.addEventListener("click", () => window.minimize());
-    document.getElementById("titlebar-close")?.addEventListener("click", () => window.close());
-  }
-
   // Prevent right-click in prod
   if (import.meta.env.PROD) {
     document.addEventListener("contextmenu", (event) => event.preventDefault());
