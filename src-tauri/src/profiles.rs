@@ -92,16 +92,34 @@ pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
 }
 
 #[tauri::command(async)]
-pub fn save_profile(profile: Profile, app: AppHandle) -> Result<(), String> {
-    let save_path = profile_dialog_builder(&app).blocking_save_file();
-    save_path.map_or_else(
-        || Err("Could not select file to save".to_string()),
-        |path| match write_profile_to_file(&path, &profile) {
-            Ok(()) => {
-                set_latest_profile_path(&app, path);
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        },
-    )
+pub fn save_current_profile(profile: Profile, app: AppHandle) -> Result<(), String> {
+    if let Some(state) = app.try_state::<LockedState>() {
+        if let Some(path) = state.last_profile_path.lock().unwrap() {
+            save_profile(profile, path, app)
+        } else {
+            save_profile_as(profile, app)
+        }
+    } else {
+        Err("Error: could not get app state".to_string())
+    }
+}
+
+#[tauri::command(async)]
+pub fn save_profile_as(profile: Profile, app: AppHandle) -> Result<(), String> {
+    profile_dialog_builder(&app)
+        .blocking_save_file()
+        .map_or_else(
+            || Err("Dialog closed without selecting save path".to_string()),
+            |path| save_profile(profile, path, app),
+        )
+}
+
+fn save_profile(profile: Profile, path: PathBuf, app: AppHandle) -> Result<(), String> {
+    match write_profile_to_file(&path, &profile) {
+        Ok(()) => {
+            set_latest_profile_path(&app, path);
+            Ok(())
+        }
+        Err(e) => Err(e.to_string()),
+    }
 }

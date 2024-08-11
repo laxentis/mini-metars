@@ -85,7 +85,8 @@ fn main() {
             lookup_station,
             get_atis,
             profiles::load_profile,
-            profiles::save_profile
+            profiles::save_current_profile,
+            profiles::save_profile_as
         ])
         .setup(|app| {
             let window_builder =
