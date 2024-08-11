@@ -1,8 +1,8 @@
 import { Component } from "solid-js";
 
-export const DeleteButton: Component<{ deleteFn: () => void }> = (props) => {
+export const DeleteButton: Component<{ onClick: () => void }> = (props) => {
   return (
-    <div class="flex w-4 h-5 items-center cursor-pointer" onClick={props.deleteFn}>
+    <div class="flex w-4 h-5 items-center cursor-pointer" onClick={props.onClick}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"

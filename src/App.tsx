@@ -20,6 +20,7 @@ function removeIndex<T>(array: readonly T[], index: number): T[] {
 export interface MainUiStore {
   showScroll: boolean;
   showInput: boolean;
+  showTitlebar: boolean;
 }
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
   const [mainUi, setMainUi] = createStore<MainUiStore>({
     showScroll: true,
     showInput: true,
+    showTitlebar: true,
   });
 
   let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
@@ -72,12 +74,38 @@ function App() {
   // Create shortcuts to toggle input box
   createShortcut(
     [CtrlOrCmd, "D"],
-    async () => await applyFnAndResize(() => setMainUi("showInput", (prev) => !prev)),
+    async () =>
+      await applyFnAndResize(() => {
+        if (ids.length > 0) {
+          setMainUi("showInput", (prev) => !prev);
+        }
+      }),
     {
       preventDefault: true,
       requireReset: false,
     }
   );
+
+  // Create shortcut to hide custom titlebar, Windows only
+  createShortcut(
+    [CtrlOrCmd, "B"],
+    async () =>
+      await applyFnAndResize(() => {
+        if (useCustomTitlebar) {
+          setMainUi("showTitlebar", (prev) => !prev);
+        }
+      }),
+    {
+      preventDefault: true,
+      requireReset: false,
+    }
+  );
+
+  // Create shortcut to minize Window
+  createShortcut([CtrlOrCmd, "M"], async () => await window.minimize(), {
+    preventDefault: true,
+    requireReset: false,
+  });
 
   async function resetWindowHeight() {
     if (containerRef !== undefined) {
@@ -86,7 +114,7 @@ function App() {
       logIfDev("containerRef height", containerRef.offsetHeight);
       let scaleFactor = await window.scaleFactor();
       logIfDev("Scale factor", scaleFactor);
-      let offset = type() === "macos" ? 30 : 24;
+      let offset = mainUi.showTitlebar ? (type() === "macos" ? 30 : 24) : 0;
       await window.setSize(
         new PhysicalSize(currentSize.width, (containerRef.offsetHeight + offset) * scaleFactor)
       );
@@ -122,13 +150,13 @@ function App() {
 
   return (
     <div>
-      <Show when={useCustomTitlebar}>
+      <Show when={useCustomTitlebar && mainUi.showTitlebar}>
         <CustomTitlebar />
       </Show>
       <div
         class={clsx({
           "h-screen": true,
-          "pt-[24px]": useCustomTitlebar,
+          "pt-[24px]": useCustomTitlebar && mainUi.showTitlebar,
           "overflow-auto": mainUi.showScroll,
           "overflow-hidden": !mainUi.showScroll,
         })}
@@ -139,7 +167,7 @@ function App() {
               {(id, i) => (
                 <div class="flex">
                   <Show when={mainUi.showInput}>
-                    <DeleteButton deleteFn={async () => await removeStation(i())} />
+                    <DeleteButton onClick={async () => await removeStation(i())} />
                   </Show>
                   <Metar requestedId={id} resizeAfterFn={applyFnAndResize} mainUi={mainUi} />
                 </div>

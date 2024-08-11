@@ -139,6 +139,11 @@ export const Metar: Component<MetarProps> = (props) => {
   const toggleShowAtisTexts = () => {
     props.resizeAfterFn(() => {
       batch(() => {
+        if (atisTexts.length === 0) {
+          setShowAtisTexts(false);
+          return;
+        }
+
         if (showAtisTexts()) {
           setShowAtisTexts(false);
         } else {
