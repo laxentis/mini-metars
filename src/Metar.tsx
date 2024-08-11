@@ -1,12 +1,23 @@
-import { Component, createSignal, For, onCleanup, onMount, Setter, Show } from "solid-js";
+import {
+  Component,
+  createMemo,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Setter,
+  Show,
+} from "solid-js";
 import { lookupStationCmd, updateAtisCmd, updateMetarCmd } from "./tauri.ts";
 import { logIfDev } from "./logging.ts";
 import { createStore, SetStoreFunction } from "solid-js/store";
 import { MainUiStore } from "./App.tsx";
+import { clsx } from "clsx";
 
 interface MetarProps {
   requestedId: string;
   resizeFn: () => Promise<void>;
+  mainUi: MainUiStore;
   mainUiSetter: SetStoreFunction<MainUiStore>;
 }
 
@@ -128,6 +139,13 @@ export const Metar: Component<MetarProps> = (props) => {
     await toggleWithResize(setShowAtisTexts);
   };
 
+  let fullTextClass = createMemo(() => {
+    return clsx({
+      "text-xs mb-1 text-gray-400": true,
+      "w-[calc(100vw-1.25rem)] pr-1": props.mainUi.showInput,
+    });
+  });
+
   return (
     <div class="flex flex-col mx-1 select-none cursor-pointer">
       <div class="flex font-mono text-sm">
@@ -143,14 +161,10 @@ export const Metar: Component<MetarProps> = (props) => {
         </div>
       </div>
       <Show when={showFullMetar() && rawMetar() !== ""}>
-        <div class="text-xs mb-1 text-gray-400 w-[calc(100vw-1.25rem)] pr-0.5">{rawMetar()}</div>
+        <div class={fullTextClass()}>{rawMetar()}</div>
       </Show>
       <Show when={showAtisTexts()}>
-        <For each={atisTexts}>
-          {(atisText) => (
-            <div class="text-xs mb-1 text-gray-400 w-[calc(100vw-1.25rem)] pr-0.5">{atisText}</div>
-          )}
-        </For>
+        <For each={atisTexts}>{(atisText) => <div class={fullTextClass()}>{atisText}</div>}</For>
       </Show>
     </div>
   );

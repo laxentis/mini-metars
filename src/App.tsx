@@ -11,6 +11,7 @@ import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 import { loadProfileCmd, Profile, saveProfileCmd } from "./tauri.ts";
 import { type } from "@tauri-apps/plugin-os";
 import { CustomTitlebar } from "./CustomTitlebar.tsx";
+import { DeleteButton } from "./DeleteButton.tsx";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
   return [...array.slice(0, index), ...array.slice(index + 1)];
@@ -141,21 +142,15 @@ function App() {
             <For each={ids}>
               {(id, i) => (
                 <div class="flex">
-                  <div
-                    class="flex w-4 h-5 items-center cursor-pointer"
-                    onClick={async () => removeStation(i())}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      class="size-4 stroke-red-700 hover:stroke-red-500 transition-colors"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
-                    </svg>
-                  </div>
-                  <Metar requestedId={id} resizeFn={resetWindowHeight} mainUiSetter={setMainUi} />
+                  <Show when={mainUi.showInput}>
+                    <DeleteButton deleteFn={async () => await removeStation(i())} />
+                  </Show>
+                  <Metar
+                    requestedId={id}
+                    resizeFn={resetWindowHeight}
+                    mainUi={mainUi}
+                    mainUiSetter={setMainUi}
+                  />
                 </div>
               )}
             </For>
