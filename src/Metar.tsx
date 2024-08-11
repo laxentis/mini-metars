@@ -1,24 +1,23 @@
 import {
+  batch,
   Component,
   createMemo,
   createSignal,
   For,
   onCleanup,
   onMount,
-  Setter,
   Show,
 } from "solid-js";
 import { lookupStationCmd, updateAtisCmd, updateMetarCmd } from "./tauri.ts";
 import { logIfDev } from "./logging.ts";
-import { createStore, SetStoreFunction } from "solid-js/store";
+import { createStore } from "solid-js/store";
 import { MainUiStore } from "./App.tsx";
 import { clsx } from "clsx";
 
 interface MetarProps {
   requestedId: string;
-  resizeFn: () => Promise<void>;
   mainUi: MainUiStore;
-  mainUiSetter: SetStoreFunction<MainUiStore>;
+  resizeAfterFn: (fn: () => void) => void;
 }
 
 function getRandomInt(min: number, max: number) {
@@ -124,19 +123,30 @@ export const Metar: Component<MetarProps> = (props) => {
     }
   });
 
-  const toggleWithResize = async (setter: Setter<boolean>) => {
-    props.mainUiSetter("showScroll", false);
-    setter((prev) => !prev);
-    await props.resizeFn();
-    props.mainUiSetter("showScroll", true);
+  const toggleShowMetar = () => {
+    props.resizeAfterFn(() => {
+      batch(() => {
+        if (showFullMetar()) {
+          setShowFullMetar(false);
+        } else {
+          setShowFullMetar(true);
+          setShowAtisTexts(false);
+        }
+      });
+    });
   };
 
-  const toggleShowMetar = async () => {
-    await toggleWithResize(setShowFullMetar);
-  };
-
-  const toggleShowAtisTexts = async () => {
-    await toggleWithResize(setShowAtisTexts);
+  const toggleShowAtisTexts = () => {
+    props.resizeAfterFn(() => {
+      batch(() => {
+        if (showAtisTexts()) {
+          setShowAtisTexts(false);
+        } else {
+          setShowAtisTexts(true);
+          setShowFullMetar(false);
+        }
+      });
+    });
   };
 
   let fullTextClass = createMemo(() => {

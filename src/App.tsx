@@ -42,7 +42,6 @@ function App() {
   });
 
   let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
-  let PlusOrEquals = type() === "macos" || type() === "ios" ? "=" : "+";
 
   // Create shortcuts for profile open and save
   createShortcut(
@@ -77,11 +76,7 @@ function App() {
     await resetWindowHeight();
     setMainUi("showScroll", true);
   };
-  createShortcut([CtrlOrCmd, "+"], toggleInput, {
-    preventDefault: true,
-    requireReset: false,
-  });
-  createShortcut([CtrlOrCmd, "Shift", PlusOrEquals], toggleInput, {
+  createShortcut([CtrlOrCmd, "D"], toggleInput, {
     preventDefault: true,
     requireReset: false,
   });
@@ -99,29 +94,31 @@ function App() {
     }
   }
 
-  async function loadStationsFromProfile(p: Profile) {
+  async function applyFnAndResize(fn: () => void) {
     setMainUi("showScroll", false);
-    setIds(p.stations);
+    fn();
     await resetWindowHeight();
     setMainUi("showScroll", true);
+  }
+
+  async function loadStationsFromProfile(p: Profile) {
+    await applyFnAndResize(() => setIds(p.stations));
   }
 
   async function addStation(e: SubmitEvent) {
     e.preventDefault();
-    setMainUi("showScroll", false);
-    batch(() => {
-      if (inputId().length >= 3 && inputId().length <= 4) {
-        setIds(ids.length, inputId());
-        setInputId("");
-      }
-    });
-    await resetWindowHeight();
-    setMainUi("showScroll", true);
+    await applyFnAndResize(() =>
+      batch(() => {
+        if (inputId().length >= 3 && inputId().length <= 4) {
+          setIds(ids.length, inputId());
+          setInputId("");
+        }
+      })
+    );
   }
 
   async function removeStation(index: number) {
-    setIds((ids) => removeIndex(ids, index));
-    await resetWindowHeight();
+    await applyFnAndResize(() => setIds((ids) => removeIndex(ids, index)));
   }
 
   return (
@@ -145,12 +142,7 @@ function App() {
                   <Show when={mainUi.showInput}>
                     <DeleteButton deleteFn={async () => await removeStation(i())} />
                   </Show>
-                  <Metar
-                    requestedId={id}
-                    resizeFn={resetWindowHeight}
-                    mainUi={mainUi}
-                    mainUiSetter={setMainUi}
-                  />
+                  <Metar requestedId={id} resizeAfterFn={applyFnAndResize} mainUi={mainUi} />
                 </div>
               )}
             </For>
