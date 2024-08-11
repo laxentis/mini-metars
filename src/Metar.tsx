@@ -143,11 +143,13 @@ export const Metar: Component<MetarProps> = (props) => {
         </div>
       </div>
       <Show when={showFullMetar() && rawMetar() !== ""}>
-        <div class="text-xs mb-1 text-gray-400">{rawMetar()}</div>
+        <div class="text-xs mb-1 text-gray-400 w-[calc(100vw-1.25rem)] pr-0.5">{rawMetar()}</div>
       </Show>
       <Show when={showAtisTexts()}>
         <For each={atisTexts}>
-          {(atisText) => <div class="text-xs mb-1 text-gray-400">{atisText}</div>}
+          {(atisText) => (
+            <div class="text-xs mb-1 text-gray-400 w-[calc(100vw-1.25rem)] pr-0.5">{atisText}</div>
+          )}
         </For>
       </Show>
     </div>
