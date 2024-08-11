@@ -86,8 +86,9 @@ function App() {
       logIfDev("containerRef height", containerRef.offsetHeight);
       let scaleFactor = await window.scaleFactor();
       logIfDev("Scale factor", scaleFactor);
+      let offset = type() === "macos" ? 30 : 24;
       await window.setSize(
-        new PhysicalSize(currentSize.width, (containerRef.offsetHeight + 24) * scaleFactor)
+        new PhysicalSize(currentSize.width, (containerRef.offsetHeight + offset) * scaleFactor)
       );
     }
   }

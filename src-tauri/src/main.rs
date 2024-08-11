@@ -91,12 +91,14 @@ fn main() {
             let window_builder =
                 WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
                     .title("Mini METARs")
-                    .inner_size(250.0, 58.0)
                     .always_on_top(true);
+
+            #[cfg(not(target_os = "windows"))]
+            let window_builder = window_builder.inner_size(250.0, 64.0);
 
             // Use custom titlebar on Windows only
             #[cfg(target_os = "windows")]
-            let window_builder = window_builder.decorations(false);
+            let window_builder = window_builder.inner_size(250.0, 58.0).decorations(false);
 
             let _ = window_builder.build().unwrap();
             Ok(())
