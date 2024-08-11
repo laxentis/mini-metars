@@ -70,16 +70,14 @@ function App() {
   );
 
   // Create shortcuts to toggle input box
-  const toggleInput = async () => {
-    setMainUi("showScroll", false);
-    setMainUi("showInput", (prev) => !prev);
-    await resetWindowHeight();
-    setMainUi("showScroll", true);
-  };
-  createShortcut([CtrlOrCmd, "D"], toggleInput, {
-    preventDefault: true,
-    requireReset: false,
-  });
+  createShortcut(
+    [CtrlOrCmd, "D"],
+    async () => await applyFnAndResize(() => setMainUi("showInput", (prev) => !prev)),
+    {
+      preventDefault: true,
+      requireReset: false,
+    }
+  );
 
   async function resetWindowHeight() {
     if (containerRef !== undefined) {
