@@ -88,7 +88,10 @@ fn main() {
             get_atis,
             profiles::load_profile,
             profiles::save_current_profile,
-            profiles::save_profile_as
+            profiles::save_profile_as,
+            settings::load_settings,
+            settings::load_settings_initial,
+            settings::save_settings
         ])
         .setup(|app| {
             let window_builder = WebviewWindowBuilder::new(

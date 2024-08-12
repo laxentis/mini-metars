@@ -1,6 +1,6 @@
 import "./styles.css";
 import { Metar } from "./Metar.tsx";
-import { batch, createMemo, createSignal, For, Show } from "solid-js";
+import { batch, createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 // @ts-ignore
 import { autofocus } from "@solid-primitives/autofocus";
@@ -8,7 +8,15 @@ import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { logIfDev } from "./logging.ts";
 import { clsx } from "clsx";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
-import { loadProfileCmd, Profile, saveProfileAsCmd, saveProfileCmd } from "./tauri.ts";
+import {
+  loadProfileCmd,
+  loadSettingsInitialCmd,
+  Profile,
+  saveProfileAsCmd,
+  saveProfileCmd,
+  saveSettingsCmd,
+  Settings,
+} from "./tauri.ts";
 import { type } from "@tauri-apps/plugin-os";
 import { CustomTitlebar } from "./CustomTitlebar.tsx";
 import { DeleteButton } from "./DeleteButton.tsx";
@@ -43,6 +51,9 @@ function App() {
     showTitlebar: true,
   });
 
+  // Settings store
+  const [settings, setSettings] = createStore<Settings>({ loadMostRecentProfileOnOpen: true });
+
   let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
 
   let currentProfileState = createMemo<Profile>(() => {
@@ -60,7 +71,8 @@ function App() {
     async () => {
       try {
         let p = await loadProfileCmd();
-        await loadStationsFromProfile(p);
+        await loadProfile(p);
+        await saveSettingsCmd(settings);
       } catch (error) {
         console.log(error);
       }
@@ -72,6 +84,7 @@ function App() {
     async () => {
       try {
         await saveProfileCmd(currentProfileState());
+        await saveSettingsCmd(settings);
       } catch (error) {
         console.log(error);
       }
@@ -83,6 +96,7 @@ function App() {
     async () => {
       try {
         await saveProfileAsCmd(currentProfileState());
+        await saveSettingsCmd(settings);
       } catch (error) {
         console.log(error);
       }
@@ -147,11 +161,21 @@ function App() {
     setMainUi("showScroll", true);
   }
 
-  async function loadStationsFromProfile(p: Profile) {
+  async function loadProfile(p: Profile) {
     if (p.window === null) {
-      await applyFnAndResize(() => setIds(p.stations));
+      await applyFnAndResize(() => {
+        batch(() => {
+          setIds(p.stations);
+          setMainUi("showInput", p.showInput);
+          setMainUi("showTitlebar", p.showTitlebar);
+        });
+      });
     } else {
-      setIds(p.stations);
+      batch(() => {
+        setIds(p.stations);
+        setMainUi("showInput", p.showInput);
+        setMainUi("showTitlebar", p.showTitlebar);
+      });
     }
   }
 
@@ -170,6 +194,14 @@ function App() {
   async function removeStation(index: number) {
     await applyFnAndResize(() => setIds((ids) => removeIndex(ids, index)));
   }
+
+  onMount(async () => {
+    let res = await loadSettingsInitialCmd();
+    setSettings(res.settings);
+    if (res.profile && settings.loadMostRecentProfileOnOpen) {
+      await loadProfile(res.profile!);
+    }
+  });
 
   return (
     <div>

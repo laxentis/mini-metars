@@ -83,9 +83,13 @@ interface Window {
 }
 
 interface Settings {
-  showVatsimAtis: boolean;
-  showAltimeter: boolean;
-  showWind: boolean;
+  loadMostRecentProfileOnOpen: boolean;
+  mostRecentProfile?: string;
+}
+
+interface InitialSettingsLoad {
+  settings: Settings;
+  profile?: Profile;
 }
 
 const updateMetarCmd = (id: string): Promise<FetchMetarResponse> =>
@@ -106,6 +110,9 @@ const saveProfileAsCmd = (profile: Profile): Promise<void> =>
 
 const loadSettingsCmd = (): Promise<Settings> => invoke("load_settings", {});
 
+const loadSettingsInitialCmd = (): Promise<InitialSettingsLoad> =>
+  invoke("load_settings_initial", {});
+
 const saveSettingsCmd = (settings: Settings): Promise<void> =>
   invoke("save_settings", { settings: settings });
 
@@ -117,6 +124,7 @@ export {
   saveProfileCmd,
   saveProfileAsCmd,
   loadSettingsCmd,
+  loadSettingsInitialCmd,
   saveSettingsCmd,
 };
-export type { CloudLayer, MetarDto, Profile, Settings };
+export type { CloudLayer, MetarDto, Profile, Settings, InitialSettingsLoad };

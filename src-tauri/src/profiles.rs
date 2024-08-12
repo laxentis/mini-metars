@@ -82,7 +82,7 @@ fn set_latest_profile_path(app: &AppHandle, path: PathBuf) {
     }
 }
 
-fn get_latest_profile_path(app: &AppHandle) -> Option<PathBuf> {
+pub fn get_latest_profile_path(app: &AppHandle) -> Option<PathBuf> {
     app.try_state::<LockedState>()
         .and_then(|state| state.last_profile_path.lock().unwrap().clone())
 }
@@ -94,20 +94,24 @@ pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
     let pick_response = profile_dialog_builder(&app).blocking_pick_file();
     let ret = pick_response.map_or_else(
         || Err("Could not pick file".to_string()),
-        |pick| match read_profile_from_file(&pick.path) {
-            Ok(profile) => {
-                set_latest_profile_path(&app, pick.path);
-                if let Some(window) = &profile.window {
-                    apply_window_state(&app, window).map_err(|e| e.to_string())?;
-                }
-                Ok(profile)
-            }
-            Err(e) => Err(e.to_string()),
-        },
+        |pick| load_profile_from_path(&app, pick.path),
     );
     set_always_on_top(window.as_ref(), true)?;
 
     ret
+}
+
+pub fn load_profile_from_path(app: &AppHandle, path: PathBuf) -> Result<Profile, String> {
+    match read_profile_from_file(&path) {
+        Ok(profile) => {
+            set_latest_profile_path(app, path.clone());
+            if let Some(window) = &profile.window {
+                apply_window_state(app, window).map_err(|e| e.to_string())?;
+            }
+            Ok(profile)
+        }
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[tauri::command(async)]
