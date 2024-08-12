@@ -1,6 +1,6 @@
 import "./styles.css";
 import { Metar } from "./Metar.tsx";
-import { batch, createSignal, For, Show } from "solid-js";
+import { batch, createMemo, createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 // @ts-ignore
 import { autofocus } from "@solid-primitives/autofocus";
@@ -8,7 +8,7 @@ import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { logIfDev } from "./logging.ts";
 import { clsx } from "clsx";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
-import { loadProfileCmd, Profile, saveProfileCmd } from "./tauri.ts";
+import { loadProfileCmd, Profile, saveProfileAsCmd, saveProfileCmd } from "./tauri.ts";
 import { type } from "@tauri-apps/plugin-os";
 import { CustomTitlebar } from "./CustomTitlebar.tsx";
 import { DeleteButton } from "./DeleteButton.tsx";
@@ -45,6 +45,15 @@ function App() {
 
   let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
 
+  let currentProfileState = createMemo<Profile>(() => {
+    return {
+      name: "",
+      stations: ids,
+      showTitlebar: mainUi.showTitlebar,
+      showInput: mainUi.showInput,
+    };
+  });
+
   // Create shortcuts for profile open and save
   createShortcut(
     [CtrlOrCmd, "O"],
@@ -62,8 +71,18 @@ function App() {
     [CtrlOrCmd, "S"],
     async () => {
       try {
-        let p: Profile = { name: "", stations: ids };
-        await saveProfileCmd(p);
+        await saveProfileCmd(currentProfileState());
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    { preventDefault: true, requireReset: true }
+  );
+  createShortcut(
+    [CtrlOrCmd, "Shift", "S"],
+    async () => {
+      try {
+        await saveProfileAsCmd(currentProfileState());
       } catch (error) {
         console.log(error);
       }
@@ -129,7 +148,11 @@ function App() {
   }
 
   async function loadStationsFromProfile(p: Profile) {
-    await applyFnAndResize(() => setIds(p.stations));
+    if (p.window === null) {
+      await applyFnAndResize(() => setIds(p.stations));
+    } else {
+      setIds(p.stations);
+    }
   }
 
   async function addStation(e: SubmitEvent) {

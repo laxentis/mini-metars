@@ -2,13 +2,16 @@ use crate::{utils, LockedState, MAIN_WINDOW_LABEL};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Wry};
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewWindow, Wry};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub name: String,
     pub stations: Vec<String>,
+    pub show_input: Option<bool>,
+    pub show_titlebar: Option<bool>,
     pub window: Option<ProfileWindowState>,
 }
 
@@ -86,17 +89,25 @@ fn get_latest_profile_path(app: &AppHandle) -> Option<PathBuf> {
 
 #[tauri::command(async)]
 pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL);
+    set_always_on_top(window.as_ref(), false)?;
     let pick_response = profile_dialog_builder(&app).blocking_pick_file();
-    pick_response.map_or_else(
+    let ret = pick_response.map_or_else(
         || Err("Could not pick file".to_string()),
         |pick| match read_profile_from_file(&pick.path) {
             Ok(profile) => {
                 set_latest_profile_path(&app, pick.path);
+                if let Some(window) = &profile.window {
+                    apply_window_state(&app, window).map_err(|e| e.to_string())?;
+                }
                 Ok(profile)
             }
             Err(e) => Err(e.to_string()),
         },
-    )
+    );
+    set_always_on_top(window.as_ref(), true)?;
+
+    ret
 }
 
 #[tauri::command(async)]
@@ -109,25 +120,36 @@ pub fn save_current_profile(mut profile: Profile, app: AppHandle) -> Result<(), 
             if let Some(path) = last_profile_path {
                 save_profile(&profile, path, &app)
             } else {
-                _save_profile_as(profile, &app)
+                save_profile_as(profile, app.clone())
             }
         },
     )
 }
 
 #[tauri::command(async)]
-pub fn save_profile_as(profile: Profile, app: AppHandle) -> Result<(), String> {
-    _save_profile_as(profile, &app)
-}
-
-pub fn _save_profile_as(mut profile: Profile, app: &AppHandle) -> Result<(), String> {
-    profile.window = get_window_state(app);
-    profile_dialog_builder(&app)
+pub fn save_profile_as(mut profile: Profile, app: AppHandle) -> Result<(), String> {
+    profile.window = get_window_state(&app);
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL);
+    set_always_on_top(window.as_ref(), false)?;
+    let ret = profile_dialog_builder(&app)
         .blocking_save_file()
         .map_or_else(
             || Err("Dialog closed without selecting save path".to_string()),
             |path| save_profile(&profile, path, &app),
-        )
+        );
+    set_always_on_top(window.as_ref(), true)?;
+
+    ret
+}
+
+fn set_always_on_top(window: Option<&WebviewWindow>, always_on_top: bool) -> Result<(), String> {
+    window.map_or_else(
+        || Err("Could not find window".to_string()),
+        |w| {
+            w.set_always_on_top(always_on_top)
+                .map_err(|e| e.to_string())
+        },
+    )
 }
 
 fn save_profile(profile: &Profile, path: PathBuf, app: &AppHandle) -> Result<(), String> {
@@ -141,7 +163,7 @@ fn save_profile(profile: &Profile, path: PathBuf, app: &AppHandle) -> Result<(),
 }
 
 fn get_window_state(app: &AppHandle) -> Option<ProfileWindowState> {
-    app.get_window(MAIN_WINDOW_LABEL)
+    app.get_webview_window(MAIN_WINDOW_LABEL)
         .map(|w| ProfileWindowState {
             state: if w.is_maximized().unwrap_or_default() {
                 WindowState::Maximized
@@ -159,7 +181,7 @@ fn apply_window_state(
     app: &AppHandle,
     window_state: &ProfileWindowState,
 ) -> Result<(), anyhow::Error> {
-    app.get_window(MAIN_WINDOW_LABEL).map_or_else(
+    app.get_webview_window(MAIN_WINDOW_LABEL).map_or_else(
         || Err(anyhow!("Could not find main window")),
         |w| {
             match window_state.state {

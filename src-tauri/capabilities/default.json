@@ -19,7 +19,6 @@
     "core:window:allow-close",
     "core:window:allow-minimize",
     "shell:allow-open",
-    "os:allow-os-type",
-    "dialog:default"
+    "os:allow-os-type"
   ]
 }

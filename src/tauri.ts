@@ -71,6 +71,8 @@ interface FetchAtisResponse {
 interface Profile {
   name: string;
   stations: string[];
+  showInput: boolean;
+  showTitlebar: boolean;
   window?: Window;
 }
 
@@ -99,6 +101,9 @@ const loadProfileCmd = (): Promise<Profile> => invoke("load_profile", {});
 const saveProfileCmd = (profile: Profile): Promise<void> =>
   invoke("save_current_profile", { profile: profile });
 
+const saveProfileAsCmd = (profile: Profile): Promise<void> =>
+  invoke("save_profile_as", { profile: profile });
+
 const loadSettingsCmd = (): Promise<Settings> => invoke("load_settings", {});
 
 const saveSettingsCmd = (settings: Settings): Promise<void> =>
@@ -110,6 +115,7 @@ export {
   updateAtisCmd,
   loadProfileCmd,
   saveProfileCmd,
+  saveProfileAsCmd,
   loadSettingsCmd,
   saveSettingsCmd,
 };
