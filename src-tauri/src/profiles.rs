@@ -26,14 +26,6 @@ pub struct ProfileWindowState {
     size: Option<PhysicalSize<u32>>,
 }
 
-//
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct ProfileResponse {
-//     pub filename: String,
-//     pub directory: String,
-//     pub data: Profile,
-// }
-
 fn profiles_path() -> Option<PathBuf> {
     dirs::config_local_dir().map(|p| p.join("Mini METARs").join("Profiles"))
 }
@@ -64,7 +56,6 @@ fn profile_dialog_builder(app: &AppHandle) -> FileDialogBuilder<Wry> {
             Ok(true) => Some(p),
             _ => None,
         });
-
     if dialog_path.is_some() {
         builder = builder.set_directory(dialog_path.unwrap());
     }
@@ -110,25 +101,27 @@ pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
 
 #[tauri::command(async)]
 pub fn save_current_profile(mut profile: Profile, app: AppHandle) -> Result<(), String> {
-    println!("here");
     profile.window = get_window_state(&app);
-    println!("{:?}", profile);
     app.try_state::<LockedState>().map_or_else(
         || Err("Could not get app state".to_string()),
         |state| {
-            if let Some(path) = &mut *state.last_profile_path.lock().unwrap() {
-                save_profile(&profile, path.clone(), &app)
+            let last_profile_path = state.last_profile_path.lock().unwrap().clone();
+            if let Some(path) = last_profile_path {
+                save_profile(&profile, path, &app)
             } else {
-                save_profile_as(profile, app.clone())
+                _save_profile_as(profile, &app)
             }
         },
     )
 }
 
 #[tauri::command(async)]
-pub fn save_profile_as(mut profile: Profile, app: AppHandle) -> Result<(), String> {
-    println!("here2");
-    profile.window = get_window_state(&app);
+pub fn save_profile_as(profile: Profile, app: AppHandle) -> Result<(), String> {
+    _save_profile_as(profile, &app)
+}
+
+pub fn _save_profile_as(mut profile: Profile, app: &AppHandle) -> Result<(), String> {
+    profile.window = get_window_state(app);
     profile_dialog_builder(&app)
         .blocking_save_file()
         .map_or_else(

@@ -71,6 +71,13 @@ interface FetchAtisResponse {
 interface Profile {
   name: string;
   stations: string[];
+  window?: Window;
+}
+
+interface Window {
+  state: "Normal" | "Maximized" | "FullScreen";
+  position: { x: number; y: number };
+  size: { width: number; height: number };
 }
 
 interface Settings {
