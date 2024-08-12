@@ -178,10 +178,10 @@ function App() {
       </Show>
       <div
         class={clsx({
-          "h-screen": true,
+          "h-screen overflow-x-hidden": true,
           "pt-[24px]": useCustomTitlebar && mainUi.showTitlebar,
-          "overflow-auto": mainUi.showScroll,
-          "overflow-hidden": !mainUi.showScroll,
+          "overflow-y-auto": mainUi.showScroll,
+          "overflow-y-hidden": !mainUi.showScroll,
         })}
       >
         <div class="flex flex-col bg-black text-white" ref={containerRef}>

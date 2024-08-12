@@ -156,8 +156,9 @@ export const Metar: Component<MetarProps> = (props) => {
 
   let fullTextClass = createMemo(() => {
     return clsx({
-      "text-xs mb-1 text-gray-400": true,
-      "w-[calc(100vw-1.25rem)] pr-1": props.mainUi.showInput,
+      "text-xs mb-1 text-gray-400 pr-1": true,
+      "w-[calc(100vw-1.25rem)]": props.mainUi.showInput,
+      "w-screen": !props.mainUi.showInput,
     });
   });
 
