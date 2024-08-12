@@ -20,6 +20,8 @@ mod profiles;
 mod settings;
 mod utils;
 
+const MAIN_WINDOW_LABEL: &str = "main";
+
 pub struct VatsimDataFetch {
     pub fetched_time: Instant,
     pub data: Result<V3ResponseData, anyhow::Error>,
@@ -89,10 +91,13 @@ fn main() {
             profiles::save_profile_as
         ])
         .setup(|app| {
-            let window_builder =
-                WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
-                    .title("Mini METARs")
-                    .always_on_top(true);
+            let window_builder = WebviewWindowBuilder::new(
+                app,
+                MAIN_WINDOW_LABEL,
+                tauri::WebviewUrl::App("index.html".into()),
+            )
+            .title("Mini METARs")
+            .always_on_top(true);
 
             #[cfg(not(target_os = "windows"))]
             let window_builder = window_builder.inner_size(250.0, 64.0);

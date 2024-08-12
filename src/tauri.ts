@@ -90,7 +90,7 @@ const updateAtisCmd = (id: string): Promise<FetchAtisResponse> =>
 const loadProfileCmd = (): Promise<Profile> => invoke("load_profile", {});
 
 const saveProfileCmd = (profile: Profile): Promise<void> =>
-  invoke("save_profile", { profile: profile });
+  invoke("save_current_profile", { profile: profile });
 
 const loadSettingsCmd = (): Promise<Settings> => invoke("load_settings", {});
 
