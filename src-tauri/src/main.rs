@@ -3,7 +3,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::awc::{MetarDto, Station};
-use crate::settings::{get_appstate_settings, read_settings_or_default, set_appstate_settings};
+use crate::profiles::read_profile_from_file;
+use crate::settings::{
+    get_appstate_settings, get_latest_profile_path, read_settings_or_default, set_appstate_settings,
+};
 use crate::state::{AppState, VatsimDataFetch};
 use anyhow::anyhow;
 use regex::Regex;
@@ -42,7 +45,7 @@ fn main() {
         .setup(|app| {
             set_appstate_settings(app.handle(), read_settings_or_default());
 
-            let window_builder = WebviewWindowBuilder::new(
+            let mut window_builder = WebviewWindowBuilder::new(
                 app,
                 MAIN_WINDOW_LABEL,
                 tauri::WebviewUrl::App("index.html".into()),
@@ -54,12 +57,36 @@ fn main() {
                     .always_on_top(),
             );
 
+            let mut x_position = 0.0;
+            let mut y_position = 0.0;
+            let mut width = 250.0;
+
+            #[cfg(target_os = "windows")]
+            let mut height = 58.0;
             #[cfg(not(target_os = "windows"))]
-            let window_builder = window_builder.inner_size(250.0, 64.0);
+            let mut height = 64.0;
+
+            if let Some(profile_path) = get_latest_profile_path(app.handle()) {
+                if let Ok(profile) = read_profile_from_file(profile_path.as_path()) {
+                    if let Some(position) = profile.window.as_ref().and_then(|w| w.position) {
+                        x_position = position.x.into();
+                        y_position = position.y.into();
+                    }
+                    if let Some(size) = profile.window.and_then(|w| w.size) {
+                        width = size.width.into();
+                        height = size.height.into();
+                    }
+                }
+            }
+
+            window_builder = window_builder.inner_size(width, height);
+            if x_position != 0.0 || y_position != 0.0 {
+                window_builder = window_builder.position(x_position, y_position);
+            }
 
             // Use custom titlebar on Windows only
             #[cfg(target_os = "windows")]
-            let window_builder = window_builder.inner_size(250.0, 58.0).decorations(false);
+            let window_builder = window_builder.decorations(false);
 
             let _ = window_builder.build().unwrap();
             Ok(())

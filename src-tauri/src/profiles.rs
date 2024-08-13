@@ -36,7 +36,7 @@ fn get_or_create_profiles_path() -> Option<PathBuf> {
     profiles_path().and_then(|p| utils::get_or_create_path(&p))
 }
 
-fn read_profile_from_file(path: &Path) -> Result<Profile, anyhow::Error> {
+pub fn read_profile_from_file(path: &Path) -> Result<Profile, anyhow::Error> {
     utils::deserialize_from_file(path)
 }
 
