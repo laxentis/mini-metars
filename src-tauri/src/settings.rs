@@ -8,12 +8,19 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
+fn true_bool() -> bool {
+    true
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
+    #[serde(default = "true_bool")]
     load_most_recent_profile_on_open: bool,
     most_recent_profile: Option<PathBuf>,
+    #[serde(default = "true_bool")]
     always_on_top: bool,
+    #[serde(default = "true_bool")]
     auto_resize: bool,
 }
 
@@ -125,9 +132,7 @@ pub fn load_settings(app: AppHandle) -> Settings {
 pub fn save_settings(app: AppHandle, settings: Option<Settings>) -> Result<(), String> {
     let appstate_settings = get_appstate_settings(&app).unwrap_or_else(read_settings_or_default);
     let write_settings = settings.map_or(appstate_settings.clone(), |s| Settings {
-        most_recent_profile: s
-            .most_recent_profile
-            .map_or_else(|| appstate_settings.most_recent_profile, Some),
+        most_recent_profile: appstate_settings.most_recent_profile,
         ..s
     });
 
