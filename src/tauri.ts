@@ -85,6 +85,8 @@ interface Window {
 interface Settings {
   loadMostRecentProfileOnOpen: boolean;
   mostRecentProfile?: string;
+  alwaysOnTop: boolean;
+  autoResize: boolean;
 }
 
 interface InitialSettingsLoad {
@@ -113,7 +115,7 @@ const loadSettingsCmd = (): Promise<Settings> => invoke("load_settings", {});
 const loadSettingsInitialCmd = (): Promise<InitialSettingsLoad> =>
   invoke("load_settings_initial", {});
 
-const saveSettingsCmd = (settings: Settings): Promise<void> =>
+const saveSettingsCmd = (settings?: Settings): Promise<void> =>
   invoke("save_settings", { settings: settings });
 
 export {

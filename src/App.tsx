@@ -52,7 +52,11 @@ function App() {
   });
 
   // Settings store
-  const [settings, setSettings] = createStore<Settings>({ loadMostRecentProfileOnOpen: true });
+  const [settings, setSettings] = createStore<Settings>({
+    loadMostRecentProfileOnOpen: true,
+    alwaysOnTop: true,
+    autoResize: true,
+  });
 
   let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
 
