@@ -68,13 +68,15 @@ fn main() {
 
             if let Some(profile_path) = get_latest_profile_path(app.handle()) {
                 if let Ok(profile) = read_profile_from_file(profile_path.as_path()) {
-                    if let Some(position) = profile.window.as_ref().and_then(|w| w.position) {
-                        x_position = position.x.into();
-                        y_position = position.y.into();
-                    }
-                    if let Some(size) = profile.window.and_then(|w| w.size) {
-                        width = size.width.into();
-                        height = size.height.into();
+                    if let Some(window) = profile.window {
+                        if let Some(position) = window.position {
+                            x_position = f64::from(position.x) / window.scale_factor;
+                            y_position = f64::from(position.y) / window.scale_factor;
+                        }
+                        if let Some(size) = window.size {
+                            width = f64::from(size.width) / window.scale_factor;
+                            height = f64::from(size.height) / window.scale_factor;
+                        }
                     }
                 }
             }

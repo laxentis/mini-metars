@@ -80,6 +80,7 @@ interface Window {
   state: "Normal" | "Maximized" | "FullScreen";
   position: { x: number; y: number };
   size: { width: number; height: number };
+  scaleFactor: number;
 }
 
 interface Settings {

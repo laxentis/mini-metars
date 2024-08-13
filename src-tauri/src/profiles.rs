@@ -22,10 +22,17 @@ pub struct Profile {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileWindowState {
     pub state: WindowState,
     pub position: Option<PhysicalPosition<i32>>,
     pub size: Option<PhysicalSize<u32>>,
+    #[serde(default = "default_scale")]
+    pub scale_factor: f64,
+}
+
+pub const fn default_scale() -> f64 {
+    1.0
 }
 
 fn profiles_path() -> Option<PathBuf> {

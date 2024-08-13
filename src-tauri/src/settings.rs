@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
-fn true_bool() -> bool {
+const fn true_bool() -> bool {
     true
 }
 

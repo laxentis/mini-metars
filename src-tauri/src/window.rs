@@ -1,4 +1,4 @@
-use crate::profiles::ProfileWindowState;
+use crate::profiles::{default_scale, ProfileWindowState};
 use crate::settings::Settings;
 use crate::MAIN_WINDOW_LABEL;
 use anyhow::anyhow;
@@ -24,6 +24,7 @@ pub fn get_window_state(app: &AppHandle) -> Option<ProfileWindowState> {
             },
             position: w.outer_position().ok(),
             size: w.outer_size().ok(),
+            scale_factor: w.scale_factor().unwrap_or_else(|_| default_scale()),
         })
 }
 
