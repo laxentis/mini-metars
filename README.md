@@ -12,8 +12,9 @@ Built with Tauri, with a Rust backend for METAR fetching and a SolidJS frontend 
 
 ### Minimal always-on-top window
 
-The application window stays "on top" of other window for constant visibility, and expands or contracts as needed to
+The application window stays "on top" of other windows for constant visibility, and expands or contracts as needed to
 display more or less information.
+
 Clicking on an ATIS letter will toggle visibility of the full VATSIM ATIS text, and clicking on either the altimeter
 setting or the wind
 will toggle visibility of the full METAR text (note: only one of the ATIS and METAR full text will be visible at once).
@@ -36,8 +37,8 @@ The following shortcuts allow you to work with profiles:
 
 * `Ctrl/Cmd` + `S`: save current profile, either to existing location (if you've loaded a profile) or to a new location
   if the current profile is new
-* `Ctrl/Cnd` + `Shift` + `S`: "save as" current profile
-* `Ctrl/Cnd` + `O`: open profile
+* `Ctrl/Cmd` + `Shift` + `S`: "save as" current profile
+* `Ctrl/Cmd` + `O`: open profile
 
 ## FAQ
 
