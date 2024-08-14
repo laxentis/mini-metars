@@ -59,8 +59,8 @@ interface Station {
 
 interface FetchMetarResponse {
   metar: MetarDto;
-  wind_string: string;
-  altimeter: number;
+  windString: string;
+  altimeter: { inHg: number; hPa: number };
 }
 
 interface FetchAtisResponse {
@@ -74,6 +74,7 @@ interface Profile {
   showInput: boolean;
   showTitlebar: boolean;
   window?: Window;
+  units: "inHg" | "hPa";
 }
 
 interface Window {

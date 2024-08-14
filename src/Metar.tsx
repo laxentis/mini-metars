@@ -33,9 +33,19 @@ export const Metar: Component<MetarProps> = (props) => {
 
   // UI Display Signals
   const [displayId, setDisplayId] = createSignal("");
-  const [altimeter, setAltimeter] = createSignal("");
   const [wind, setWind] = createSignal("");
   const [rawMetar, setRawMetar] = createSignal("");
+  const [altimeter, setAltimeter] = createStore<{ inHg: number; hpa: number }>({
+    inHg: 0.0,
+    hpa: 0.0,
+  });
+  const altimeterString = createMemo(() => {
+    if (props.mainUi.units === "inHg") {
+      return altimeter.inHg == 0 ? "" : altimeter.inHg.toFixed(2);
+    } else {
+      return altimeter.hpa == 0 ? "" : altimeter.hpa.toFixed(0);
+    }
+  });
   const [showFullMetar, setShowFullMetar] = createSignal(false);
   const [atisLetter, setAtisLetter] = createSignal("-");
   const [atisTexts, setAtisTexts] = createStore<string[]>([]);
@@ -71,8 +81,8 @@ export const Metar: Component<MetarProps> = (props) => {
       if (currentTimestamp() === undefined || newTimestamp > currentTimestamp()!) {
         logIfDev("New METAR found", icaoId());
         setCurrentTimestamp(newTimestamp);
-        setAltimeter(res.altimeter.toFixed(2));
-        setWind(res.wind_string);
+        setAltimeter(res.altimeter);
+        setWind(res.windString);
         setRawMetar(res.metar.rawOb);
       } else {
         logIfDev("Fetched METAR same as displayed", icaoId(), currentTimestamp());
@@ -170,7 +180,7 @@ export const Metar: Component<MetarProps> = (props) => {
           {atisLetter()}
         </div>
         <div class="w-16 text-center" onClick={toggleShowMetar}>
-          {altimeter()}
+          {altimeterString()}
         </div>
         <div class="flex-grow" onClick={toggleShowMetar}>
           {wind()}

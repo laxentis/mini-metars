@@ -16,9 +16,26 @@ use tauri_plugin_dialog::{DialogExt, FileDialogBuilder};
 pub struct Profile {
     pub name: String,
     pub stations: Vec<String>,
-    pub show_input: Option<bool>,
-    pub show_titlebar: Option<bool>,
+    #[serde(default = "true_bool")]
+    pub show_input: bool,
+    #[serde(default = "true_bool")]
+    pub show_titlebar: bool,
     pub window: Option<ProfileWindowState>,
+    #[serde(default)]
+    pub units: AltimeterUnits,
+}
+
+fn true_bool() -> bool {
+    true
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub enum AltimeterUnits {
+    #[default]
+    #[allow(non_camel_case_types)]
+    inHg,
+    #[allow(non_camel_case_types)]
+    hPa,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

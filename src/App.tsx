@@ -29,6 +29,7 @@ export interface MainUiStore {
   showScroll: boolean;
   showInput: boolean;
   showTitlebar: boolean;
+  units: "inHg" | "hPa";
 }
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
     showScroll: true,
     showInput: true,
     showTitlebar: true,
+    units: "inHg",
   });
 
   // Settings store
@@ -66,6 +68,7 @@ function App() {
       stations: ids,
       showTitlebar: mainUi.showTitlebar,
       showInput: mainUi.showInput,
+      units: mainUi.units,
     };
   });
 
@@ -138,10 +141,19 @@ function App() {
     }
   );
 
-  // Create shortcut to minize Window
+  // Create shortcut to minimize Window
   createShortcut([CtrlOrCmd, "M"], async () => await window.minimize(), {
     preventDefault: true,
     requireReset: false,
+  });
+
+  // Create shortcut to toggle units
+  createShortcut([CtrlOrCmd, "U"], () => {
+    if (mainUi.units === "inHg") {
+      setMainUi("units", "hPa");
+    } else {
+      setMainUi("units", "inHg");
+    }
   });
 
   async function resetWindowHeight() {
@@ -172,6 +184,7 @@ function App() {
           setIds(p.stations);
           setMainUi("showInput", p.showInput);
           setMainUi("showTitlebar", p.showTitlebar);
+          setMainUi("units", p.units);
         });
       });
     } else {
@@ -179,6 +192,7 @@ function App() {
         setIds(p.stations);
         setMainUi("showInput", p.showInput);
         setMainUi("showTitlebar", p.showTitlebar);
+        setMainUi("units", p.units);
       });
     }
   }

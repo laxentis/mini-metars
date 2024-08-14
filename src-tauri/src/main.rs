@@ -98,10 +98,18 @@ fn main() {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct FetchMetarResponse {
     metar: MetarDto,
     wind_string: String,
-    altimeter: f64,
+    altimeter: Altimeter,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Copy)]
+#[serde(rename_all = "camelCase")]
+struct Altimeter {
+    in_hg: f64,
+    hpa: f64,
 }
 
 #[tauri::command]
@@ -116,7 +124,10 @@ async fn fetch_metar(
             .map_err(|e| format!("Error fetching METARs: {e:?}"))
             .map(|m| FetchMetarResponse {
                 wind_string: m.wind_string(),
-                altimeter: m.altimeter_in_hg(),
+                altimeter: Altimeter {
+                    in_hg: m.altimeter_in_hg(),
+                    hpa: m.altimeter_hpa(),
+                },
                 metar: m,
             })
     } else {
