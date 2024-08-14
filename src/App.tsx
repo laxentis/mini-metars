@@ -141,11 +141,13 @@ function App() {
     }
   );
 
-  // Create shortcut to minimize Window
-  createShortcut([CtrlOrCmd, "M"], async () => await window.minimize(), {
-    preventDefault: true,
-    requireReset: false,
-  });
+  // Create shortcut to minimize Window. Only needed on Windows, as it's built-in on  Mac
+  if (type() === "windows") {
+    createShortcut([CtrlOrCmd, "M"], async () => await window.minimize(), {
+      preventDefault: true,
+      requireReset: false,
+    });
+  }
 
   // Create shortcut to toggle units
   createShortcut([CtrlOrCmd, "U"], () => {
