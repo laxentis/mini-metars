@@ -57,6 +57,7 @@ impl AviationWeatherCenterApi {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn fetch_metars(
         &self,
         station_ids: &[&str],
@@ -213,6 +214,10 @@ pub struct MetarDto {
 impl MetarDto {
     pub fn altimeter_in_hg(&self) -> f64 {
         (self.altim * MBAR_TO_INHG_FACTOR * 100.0).round() / 100.0
+    }
+
+    pub fn altimeter_hpa(&self) -> f64 {
+        self.altim
     }
 
     pub fn wind_string(&self) -> String {

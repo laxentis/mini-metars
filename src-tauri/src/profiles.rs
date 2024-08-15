@@ -1,22 +1,55 @@
-use crate::LockedState;
+use crate::settings::{
+    get_appstate_settings, get_latest_profile_path, read_settings_or_default,
+    set_latest_profile_path,
+};
+use crate::window::{
+    apply_window_state, get_window_state, set_always_on_top_settings_checked, WindowState,
+};
+use crate::{utils, MAIN_WINDOW_LABEL};
 use serde::{Deserialize, Serialize};
-use std::fs::{create_dir_all, File};
-use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager, Wry};
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Wry};
 use tauri_plugin_dialog::{DialogExt, FileDialogBuilder};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub name: String,
     pub stations: Vec<String>,
+    #[serde(default = "true_bool")]
+    pub show_input: bool,
+    #[serde(default = "true_bool")]
+    pub show_titlebar: bool,
+    pub window: Option<ProfileWindowState>,
+    #[serde(default)]
+    pub units: AltimeterUnits,
+}
+
+fn true_bool() -> bool {
+    true
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub enum AltimeterUnits {
+    #[default]
+    #[allow(non_camel_case_types)]
+    inHg,
+    #[allow(non_camel_case_types)]
+    hPa,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ProfileResponse {
-    pub filename: String,
-    pub directory: String,
-    pub data: Profile,
+#[serde(rename_all = "camelCase")]
+pub struct ProfileWindowState {
+    pub state: WindowState,
+    pub position: Option<PhysicalPosition<i32>>,
+    pub size: Option<PhysicalSize<u32>>,
+    #[serde(default = "default_scale")]
+    pub scale_factor: f64,
+}
+
+pub const fn default_scale() -> f64 {
+    1.0
 }
 
 fn profiles_path() -> Option<PathBuf> {
@@ -24,25 +57,15 @@ fn profiles_path() -> Option<PathBuf> {
 }
 
 fn get_or_create_profiles_path() -> Option<PathBuf> {
-    let result = profiles_path().map(|p| match p.try_exists() {
-        Ok(true) => Some(p),
-        Ok(false) => create_dir_all(&p).map_or(None, |()| Some(p)),
-        _ => None,
-    });
-
-    result.unwrap_or_default()
+    profiles_path().and_then(|p| utils::get_or_create_path(&p))
 }
 
-fn read_profile_from_file(path: &Path) -> Result<Profile, anyhow::Error> {
-    let file = File::open(path)?;
-    let de = serde_json::from_reader(BufReader::new(file))?;
-    Ok(de)
+pub fn read_profile_from_file(path: &Path) -> Result<Profile, anyhow::Error> {
+    utils::deserialize_from_file(path)
 }
 
 fn write_profile_to_file(path: &Path, profile: &Profile) -> Result<(), anyhow::Error> {
-    let file = File::create(path)?;
-    serde_json::to_writer_pretty(BufWriter::new(file), profile)?;
-    Ok(())
+    utils::serialize_to_file(path, profile)
 }
 
 fn profile_dialog_builder(app: &AppHandle) -> FileDialogBuilder<Wry> {
@@ -59,7 +82,6 @@ fn profile_dialog_builder(app: &AppHandle) -> FileDialogBuilder<Wry> {
             Ok(true) => Some(p),
             _ => None,
         });
-
     if dialog_path.is_some() {
         builder = builder.set_directory(dialog_path.unwrap());
     }
@@ -77,43 +99,72 @@ fn profile_dialog_builder(app: &AppHandle) -> FileDialogBuilder<Wry> {
     builder
 }
 
-fn set_latest_profile_path(app: &AppHandle, path: PathBuf) {
-    if let Some(state) = app.try_state::<LockedState>() {
-        *state.last_profile_path.lock().unwrap() = Some(path);
+#[tauri::command(async)]
+pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL);
+    let settings = get_appstate_settings(&app).unwrap_or_else(read_settings_or_default);
+    set_always_on_top_settings_checked(window.as_ref(), &settings, false)?;
+
+    let pick_response = profile_dialog_builder(&app).blocking_pick_file();
+    let ret = pick_response.map_or_else(
+        || Err("Could not pick file".to_string()),
+        |pick| load_profile_from_path(&app, pick.path),
+    );
+
+    set_always_on_top_settings_checked(window.as_ref(), &settings, true)?;
+
+    ret
+}
+
+pub fn load_profile_from_path(app: &AppHandle, path: PathBuf) -> Result<Profile, String> {
+    match read_profile_from_file(&path) {
+        Ok(profile) => {
+            set_latest_profile_path(app, path.clone());
+            if let Some(window) = &profile.window {
+                apply_window_state(app, window).map_err(|e| e.to_string())?;
+            }
+            Ok(profile)
+        }
+        Err(e) => Err(e.to_string()),
     }
 }
 
-fn get_latest_profile_path(app: &AppHandle) -> Option<PathBuf> {
-    app.try_state::<LockedState>()
-        .and_then(|state| state.last_profile_path.lock().unwrap().clone())
+#[tauri::command(async)]
+pub fn save_current_profile(mut profile: Profile, app: AppHandle) -> Result<(), String> {
+    profile.window = get_window_state(&app);
+    let last_profile_path = get_latest_profile_path(&app);
+    if let Some(path) = last_profile_path {
+        save_profile(&profile, path, &app)
+    } else {
+        save_profile_as(profile, app)
+    }
 }
 
 #[tauri::command(async)]
-pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
-    let pick_response = profile_dialog_builder(&app).blocking_pick_file();
-    pick_response.map_or_else(
-        || Err("Could not pick file".to_string()),
-        |pick| match read_profile_from_file(&pick.path) {
-            Ok(profile) => {
-                set_latest_profile_path(&app, pick.path);
-                Ok(profile)
-            }
-            Err(e) => Err(e.to_string()),
-        },
-    )
+pub fn save_profile_as(mut profile: Profile, app: AppHandle) -> Result<(), String> {
+    profile.window = get_window_state(&app);
+    let window = app.get_webview_window(MAIN_WINDOW_LABEL);
+    let settings = get_appstate_settings(&app).unwrap_or_else(read_settings_or_default);
+    set_always_on_top_settings_checked(window.as_ref(), &settings, false)?;
+
+    let ret = profile_dialog_builder(&app)
+        .blocking_save_file()
+        .map_or_else(
+            || Err("Dialog closed without selecting save path".to_string()),
+            |path| save_profile(&profile, path, &app),
+        );
+
+    set_always_on_top_settings_checked(window.as_ref(), &settings, true)?;
+
+    ret
 }
 
-#[tauri::command(async)]
-pub fn save_profile(profile: Profile, app: AppHandle) -> Result<(), String> {
-    let save_path = profile_dialog_builder(&app).blocking_save_file();
-    save_path.map_or_else(
-        || Err("Could not select file to save".to_string()),
-        |path| match write_profile_to_file(&path, &profile) {
-            Ok(()) => {
-                set_latest_profile_path(&app, path);
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        },
-    )
+fn save_profile(profile: &Profile, path: PathBuf, app: &AppHandle) -> Result<(), String> {
+    match write_profile_to_file(&path, profile) {
+        Ok(()) => {
+            set_latest_profile_path(app, path);
+            Ok(())
+        }
+        Err(e) => Err(e.to_string()),
+    }
 }

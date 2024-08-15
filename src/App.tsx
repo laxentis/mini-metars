@@ -1,27 +1,42 @@
 import "./styles.css";
 import { Metar } from "./Metar.tsx";
-import { batch, createSignal, For } from "solid-js";
+import { batch, createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 // @ts-ignore
 import { autofocus } from "@solid-primitives/autofocus";
 import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 import { logIfDev } from "./logging.ts";
 import { clsx } from "clsx";
-import { createShortcut } from "@solid-primitives/keyboard";
-import { loadProfile, Profile, saveProfile } from "./tauri.ts";
+import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
+import {
+  loadProfileCmd,
+  loadSettingsInitialCmd,
+  Profile,
+  saveProfileAsCmd,
+  saveProfileCmd,
+  saveSettingsCmd,
+  Settings,
+} from "./tauri.ts";
+import { type } from "@tauri-apps/plugin-os";
+import { CustomTitlebar } from "./CustomTitlebar.tsx";
+import { DeleteButton } from "./DeleteButton.tsx";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
   return [...array.slice(0, index), ...array.slice(index + 1)];
+}
+
+export interface MainUiStore {
+  showScroll: boolean;
+  showInput: boolean;
+  showTitlebar: boolean;
+  units: "inHg" | "hPa";
 }
 
 function App() {
   // Window basics
   let containerRef: HTMLDivElement | undefined;
   let window = getCurrentWindow();
-
-  // Setup titlebar
-  document.getElementById("titlebar-minimize")?.addEventListener("click", () => window.minimize());
-  document.getElementById("titlebar-close")?.addEventListener("click", () => window.close());
+  let useCustomTitlebar = type() === "windows";
 
   // Prevent right-click in prod
   if (import.meta.env.PROD) {
@@ -31,14 +46,40 @@ function App() {
   // Main signals for IDs and input
   const [inputId, setInputId] = createSignal("");
   const [ids, setIds] = createStore<string[]>([]);
+  const [mainUi, setMainUi] = createStore<MainUiStore>({
+    showScroll: true,
+    showInput: true,
+    showTitlebar: true,
+    units: "inHg",
+  });
+
+  // Settings store
+  const [settings, setSettings] = createStore<Settings>({
+    loadMostRecentProfileOnOpen: true,
+    alwaysOnTop: true,
+    autoResize: true,
+  });
+
+  let CtrlOrCmd: KbdKey = type() === "macos" || type() === "ios" ? "Meta" : "Control";
+
+  let currentProfileState = createMemo<Profile>(() => {
+    return {
+      name: "",
+      stations: ids,
+      showTitlebar: mainUi.showTitlebar,
+      showInput: mainUi.showInput,
+      units: mainUi.units,
+    };
+  });
 
   // Create shortcuts for profile open and save
   createShortcut(
-    ["Control", "O"],
+    [CtrlOrCmd, "O"],
     async () => {
       try {
-        let p = await loadProfile();
-        await loadStationsFromProfile(p);
+        let p = await loadProfileCmd();
+        await loadProfile(p);
+        await saveSettingsCmd(settings);
       } catch (error) {
         console.log(error);
       }
@@ -46,11 +87,23 @@ function App() {
     { preventDefault: true, requireReset: true }
   );
   createShortcut(
-    ["Control", "S"],
+    [CtrlOrCmd, "S"],
     async () => {
       try {
-        let p: Profile = { name: "", stations: ids };
-        await saveProfile(p);
+        await saveProfileCmd(currentProfileState());
+        await saveSettingsCmd(settings);
+      } catch (error) {
+        console.log(error);
+      }
+    },
+    { preventDefault: true, requireReset: true }
+  );
+  createShortcut(
+    [CtrlOrCmd, "Shift", "S"],
+    async () => {
+      try {
+        await saveProfileAsCmd(currentProfileState());
+        await saveSettingsCmd(settings);
       } catch (error) {
         console.log(error);
       }
@@ -58,7 +111,52 @@ function App() {
     { preventDefault: true, requireReset: true }
   );
 
-  const [hideScroll, setHideScroll] = createSignal(false);
+  // Create shortcuts to toggle input box
+  createShortcut(
+    [CtrlOrCmd, "D"],
+    async () =>
+      await applyFnAndResize(() => {
+        if (ids.length > 0) {
+          setMainUi("showInput", (prev) => !prev);
+        }
+      }),
+    {
+      preventDefault: true,
+      requireReset: false,
+    }
+  );
+
+  // Create shortcut to hide custom titlebar, Windows only
+  createShortcut(
+    [CtrlOrCmd, "B"],
+    async () =>
+      await applyFnAndResize(() => {
+        if (useCustomTitlebar) {
+          setMainUi("showTitlebar", (prev) => !prev);
+        }
+      }),
+    {
+      preventDefault: true,
+      requireReset: false,
+    }
+  );
+
+  // Create shortcut to minimize Window. Only needed on Windows, as it's built-in on  Mac
+  if (type() === "windows") {
+    createShortcut([CtrlOrCmd, "M"], async () => await window.minimize(), {
+      preventDefault: true,
+      requireReset: false,
+    });
+  }
+
+  // Create shortcut to toggle units
+  createShortcut([CtrlOrCmd, "U"], () => {
+    if (mainUi.units === "inHg") {
+      setMainUi("units", "hPa");
+    } else {
+      setMainUi("units", "inHg");
+    }
+  });
 
   async function resetWindowHeight() {
     if (containerRef !== undefined) {
@@ -67,86 +165,106 @@ function App() {
       logIfDev("containerRef height", containerRef.offsetHeight);
       let scaleFactor = await window.scaleFactor();
       logIfDev("Scale factor", scaleFactor);
+      let offset = mainUi.showTitlebar ? (type() === "macos" ? 30 : 24) : 0;
       await window.setSize(
-        new PhysicalSize(currentSize.width, (containerRef.offsetHeight + 24) * scaleFactor)
+        new PhysicalSize(currentSize.width, (containerRef.offsetHeight + offset) * scaleFactor)
       );
     }
   }
 
-  async function loadStationsFromProfile(p: Profile) {
-    setHideScroll(true);
-    setIds(p.stations);
+  async function applyFnAndResize(fn: () => void) {
+    setMainUi("showScroll", false);
+    fn();
     await resetWindowHeight();
-    setHideScroll(false);
+    setMainUi("showScroll", true);
+  }
+
+  async function loadProfile(p: Profile) {
+    if (p.window === null) {
+      await applyFnAndResize(() => {
+        batch(() => {
+          setIds(p.stations);
+          setMainUi("showInput", p.showInput);
+          setMainUi("showTitlebar", p.showTitlebar);
+          setMainUi("units", p.units);
+        });
+      });
+    } else {
+      batch(() => {
+        setIds(p.stations);
+        setMainUi("showInput", p.showInput);
+        setMainUi("showTitlebar", p.showTitlebar);
+        setMainUi("units", p.units);
+      });
+    }
   }
 
   async function addStation(e: SubmitEvent) {
     e.preventDefault();
-    setHideScroll(true);
-    batch(() => {
-      if (inputId().length >= 3 && inputId().length <= 4) {
-        setIds(ids.length, inputId());
-        setInputId("");
-      }
-    });
-    await resetWindowHeight();
-    setHideScroll(false);
+    await applyFnAndResize(() =>
+      batch(() => {
+        if (inputId().length >= 3 && inputId().length <= 4) {
+          setIds(ids.length, inputId());
+          setInputId("");
+        }
+      })
+    );
   }
 
   async function removeStation(index: number) {
-    setIds((ids) => removeIndex(ids, index));
-    await resetWindowHeight();
+    await applyFnAndResize(() => setIds((ids) => removeIndex(ids, index)));
   }
 
+  onMount(async () => {
+    let res = await loadSettingsInitialCmd();
+    setSettings(res.settings);
+    if (res.profile && settings.loadMostRecentProfileOnOpen) {
+      await loadProfile(res.profile!);
+    }
+  });
+
   return (
-    <div
-      class={clsx({
-        "pt-[24px] h-screen": true,
-        "overflow-auto": !hideScroll(),
-        "overflow-hidden": hideScroll(),
-      })}
-    >
-      <div class="flex flex-col bg-black text-white" ref={containerRef}>
-        <div class="flex flex-col grow">
-          <For each={ids}>
-            {(id, i) => (
-              <div class="flex">
-                <div
-                  class="flex w-4 h-5 items-center cursor-pointer"
-                  onClick={async () => removeStation(i())}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    class="size-4 stroke-red-700 hover:stroke-red-500 transition-colors"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
-                  </svg>
+    <div>
+      <Show when={useCustomTitlebar && mainUi.showTitlebar}>
+        <CustomTitlebar />
+      </Show>
+      <div
+        class={clsx({
+          "h-screen overflow-x-hidden": true,
+          "pt-[24px]": useCustomTitlebar && mainUi.showTitlebar,
+          "overflow-y-auto": mainUi.showScroll,
+          "overflow-y-hidden": !mainUi.showScroll,
+        })}
+      >
+        <div class="flex flex-col bg-black text-white" ref={containerRef}>
+          <div class="flex flex-col grow">
+            <For each={ids}>
+              {(id, i) => (
+                <div class="flex">
+                  <Show when={mainUi.showInput}>
+                    <DeleteButton onClick={async () => await removeStation(i())} />
+                  </Show>
+                  <Metar requestedId={id} resizeAfterFn={applyFnAndResize} mainUi={mainUi} />
                 </div>
-                <Metar
-                  requestedId={id}
-                  resizeFn={resetWindowHeight}
-                  scrollbarHide={setHideScroll}
+              )}
+            </For>
+            <Show when={mainUi.showInput}>
+              <form onSubmit={async (e) => addStation(e)}>
+                <input
+                  id="stationId"
+                  name="stationId"
+                  type="text"
+                  class="w-16 text-white font-mono bg-gray-900 mx-1 my-1 border-gray-700 border focus:outline-none focus:border-gray-500 px-1 rounded"
+                  value={inputId()}
+                  onInput={(e) => setInputId(e.currentTarget.value)}
+                  use:autofocus
+                  autofocus
+                  formNoValidate
+                  autocomplete="off"
                 />
-              </div>
-            )}
-          </For>
-          <form onSubmit={async (e) => addStation(e)}>
-            <input
-              id="stationId"
-              name="stationId"
-              type="text"
-              class="w-16 text-white font-mono bg-gray-900 mx-1 my-1 border-gray-700 border focus:outline-none focus:border-gray-500 px-1 rounded"
-              value={inputId()}
-              onInput={(e) => setInputId(e.currentTarget.value)}
-              use:autofocus
-              autofocus
-              formNoValidate
-              autocomplete="off"
-            />
-          </form>
+              </form>
+            </Show>
+          </div>
         </div>
       </div>
     </div>
