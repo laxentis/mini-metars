@@ -47,8 +47,8 @@ Profiles also store the altimeter setting units. Use `Ctrl/Cmd` + `U` to toggle 
 
 **How often do METARs update**?
 
-* Each airport/station checks for a METAR update every 2 to 2.5 minutes, with the value slightly randomized to prevent "
-  clumping" of requests.
+* Each airport/station checks for a METAR update every 2 to 2.5 minutes, with the value slightly randomized to prevent
+  "clumping" of requests.
 
 **How often do VATSIM ATIS codes update?**
 
