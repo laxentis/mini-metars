@@ -10,6 +10,10 @@ Built with Tauri, with a Rust backend for METAR fetching and a SolidJS frontend 
 
 ## Features
 
+### Cross platform
+
+Supports Windows and Mac (Apple Silicon) currently.
+
 ### Minimal always-on-top window
 
 The application window stays "on top" of other windows for constant visibility, and expands or contracts as needed to
