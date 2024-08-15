@@ -174,12 +174,19 @@ export const Metar: Component<MetarProps> = (props) => {
 
   return (
     <div class="flex flex-col mx-1 select-none cursor-pointer">
-      <div class="flex font-mono text-sm">
+      <div class="flex font-mono text-sm space-x-2.5">
         <div class="w-8">{displayId()}</div>
-        <div class="w-10 text-center" onClick={toggleShowAtisTexts}>
+        <div class="w-8 text-center" onClick={toggleShowAtisTexts}>
           {atisLetter()}
         </div>
-        <div class="w-16 text-center" onClick={toggleShowMetar}>
+        <div
+          class={clsx({
+            "text-center": true,
+            "w-12": props.mainUi.units === "inHg",
+            "w-10": props.mainUi.units === "hPa",
+          })}
+          onClick={toggleShowMetar}
+        >
           {altimeterString()}
         </div>
         <div class="flex-grow" onClick={toggleShowMetar}>
