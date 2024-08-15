@@ -19,12 +19,13 @@ Clicking on an ATIS letter will toggle visibility of the full VATSIM ATIS text, 
 setting or the wind
 will toggle visibility of the full METAR text (note: only one of the ATIS and METAR full text will be visible at once).
 
-### Visbility controls
+### Visibility controls
 
 You can toggle visibility of the titlebar (Windows-only) and the input box with the following shortcuts:
 
 * `Ctrl/Cmd` + `D`: toggle visibility of input box and station delete icons
 * `Ctrl/Cmd` + `B`: toggle visibility of the titlebar (Windows only)
+* `Ctrl/Cmd` + `M`: minimize window
 
 ### Profiles
 
@@ -39,6 +40,8 @@ The following shortcuts allow you to work with profiles:
   if the current profile is new
 * `Ctrl/Cmd` + `Shift` + `S`: "save as" current profile
 * `Ctrl/Cmd` + `O`: open profile
+
+Profiles also store the altimeter setting units. Use `Ctrl/Cmd` + `U` to toggle between inHg and hPa.
 
 ## FAQ
 
