@@ -21,6 +21,7 @@ import {
 import { type } from "@tauri-apps/plugin-os";
 import { CustomTitlebar } from "./CustomTitlebar.tsx";
 import { DeleteButton } from "./DeleteButton.tsx";
+import { warn } from "@tauri-apps/plugin-log";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
   return [...array.slice(0, index), ...array.slice(index + 1)];
@@ -82,7 +83,7 @@ function App() {
         await loadProfile(p);
         await saveSettingsCmd(settings);
       } catch (error) {
-        console.log(error);
+        await warn(`Frontend error: ${error}`);
       }
     },
     { preventDefault: true, requireReset: true }
@@ -94,7 +95,7 @@ function App() {
         await saveProfileCmd(currentProfileState());
         await saveSettingsCmd(settings);
       } catch (error) {
-        console.log(error);
+        await warn(`Frontend error: ${error}`);
       }
     },
     { preventDefault: true, requireReset: true }
@@ -106,7 +107,7 @@ function App() {
         await saveProfileAsCmd(currentProfileState());
         await saveSettingsCmd(settings);
       } catch (error) {
-        console.log(error);
+        await warn(`Frontend error: ${error}`);
       }
     },
     { preventDefault: true, requireReset: true }

@@ -9,7 +9,7 @@ use crate::settings::{
 };
 use crate::state::{AppState, VatsimDataFetch};
 use anyhow::anyhow;
-use log::{debug, error, warn};
+use log::{debug, error, trace, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, LazyLock};
@@ -233,6 +233,17 @@ async fn get_atis(
                     .iter()
                     .filter(|a| a.callsign.starts_with(icao_id))
                     .collect();
+
+                trace!(
+                    "Found {} atis for {} with callsign(s): {:?}",
+                    found_atis.len(),
+                    icao_id,
+                    found_atis
+                        .iter()
+                        .map(|a| &a.callsign)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                );
 
                 let letter_str: String = match found_atis.len() {
                     0 => "-".to_string(),

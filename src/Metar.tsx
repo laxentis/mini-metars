@@ -9,10 +9,10 @@ import {
   Show,
 } from "solid-js";
 import { lookupStationCmd, updateAtisCmd, updateMetarCmd } from "./tauri.ts";
-import { logIfDev } from "./logging.ts";
 import { createStore } from "solid-js/store";
 import { MainUiStore } from "./App.tsx";
 import { clsx } from "clsx";
+import { debug, trace, warn } from "@tauri-apps/plugin-log";
 
 interface MetarProps {
   requestedId: string;
@@ -57,14 +57,14 @@ export const Metar: Component<MetarProps> = (props) => {
 
   const fetchAndUpdateStation = async () => {
     try {
-      logIfDev("Looking up requested ID", props.requestedId);
+      await debug(`Frontend: Looking up requested ID: ${props.requestedId}`);
       let station = await lookupStationCmd(props.requestedId);
       setIcaoId(station.icaoId);
       setDisplayId(station.faaId !== "-" ? station.faaId : station.icaoId);
       setValidId(true);
     } catch (error) {
       setDisplayId(props.requestedId);
-      console.log(error);
+      await warn(`Frontend error: ${error}`);
     }
   };
 
@@ -74,21 +74,21 @@ export const Metar: Component<MetarProps> = (props) => {
     }
 
     try {
-      logIfDev("Starting update check for id", icaoId());
+      await trace(`Frontend: Starting update check for id ${icaoId()}`);
       let res = await updateMetarCmd(icaoId());
-      logIfDev("Retrieved METAR", icaoId(), res);
+      await trace(`Frontend: Retrieved METAR: ${res}`);
       let newTimestamp = new Date(res.metar.obsTime);
       if (currentTimestamp() === undefined || newTimestamp > currentTimestamp()!) {
-        logIfDev("New METAR found", icaoId());
+        await trace(`Frontend: New METAR found for ${icaoId()}`);
         setCurrentTimestamp(newTimestamp);
         setAltimeter(res.altimeter);
         setWind(res.windString);
         setRawMetar(res.metar.rawOb);
       } else {
-        logIfDev("Fetched METAR same as displayed", icaoId(), currentTimestamp());
+        await trace(`Frontend: Fetched METAR for ${icaoId()} same as displayed`);
       }
     } catch (error) {
-      console.log(error);
+      await warn(`Frontend error: ${error}`);
     }
   };
 
@@ -98,13 +98,13 @@ export const Metar: Component<MetarProps> = (props) => {
     }
 
     try {
-      logIfDev("Starting ATIS letter fetch for id", icaoId());
+      await trace(`Starting ATIS letter fetch for ${icaoId()}`);
       let res = await updateAtisCmd(icaoId());
-      logIfDev("Retrieved ATIS Letter", res);
+      await trace(`Retrieved ATIS Letter ${res}`);
       setAtisLetter(res.letter);
       setAtisTexts(res.texts);
     } catch (error) {
-      console.log(error);
+      await warn(`Frontend error: ${error}`);
     }
   };
 
@@ -119,7 +119,7 @@ export const Metar: Component<MetarProps> = (props) => {
         setLetterTimerHandle(setInterval(updateAtis, 1000 * getRandomInt(20, 30)));
       }
     } catch (error) {
-      console.log(error);
+      await warn(`Frontend error: ${error}`);
     }
   });
 
