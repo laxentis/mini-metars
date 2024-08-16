@@ -9,11 +9,14 @@ use crate::settings::{
 };
 use crate::state::{AppState, VatsimDataFetch};
 use anyhow::anyhow;
+use log::{debug, error, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
-use tauri::{State, WebviewWindowBuilder};
+use tauri::plugin::TauriPlugin;
+use tauri::{Runtime, State, WebviewWindowBuilder};
+use tauri_plugin_log::{Target, TargetKind};
 use vatsim_utils::models::{Atis, V3ResponseData};
 
 mod awc;
@@ -25,8 +28,33 @@ mod window;
 
 const MAIN_WINDOW_LABEL: &str = "main";
 
+fn build_logger<R: Runtime>() -> TauriPlugin<R> {
+    let builder = tauri_plugin_log::Builder::new()
+        .clear_targets()
+        .level(log::LevelFilter::Debug);
+
+    #[cfg(not(target_os = "windows"))]
+    let builder = builder.target(Target::new(TargetKind::LogDir {
+        file_name: Some("logs".to_string()),
+    }));
+
+    #[cfg(target_os = "windows")]
+    let builder = match dirs::config_local_dir().map(|p| p.join("Mini METARs")) {
+        Some(p) => builder.target(Target::new(TargetKind::Folder {
+            path: p,
+            file_name: Some("logs".to_string()),
+        })),
+        None => builder.target(Target::new(TargetKind::LogDir {
+            file_name: Some("logs".to_string()),
+        })),
+    };
+
+    builder.build()
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(build_logger())
         .manage(Arc::new(AppState::new()))
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
@@ -35,6 +63,7 @@ fn main() {
             fetch_metar,
             lookup_station,
             get_atis,
+            initialize_datafeed,
             profiles::load_profile,
             profiles::save_current_profile,
             profiles::save_profile_as,
@@ -67,7 +96,9 @@ fn main() {
             let mut height = 64.0;
 
             if let Some(profile_path) = get_latest_profile_path(app.handle()) {
+                debug!("Initialization - found latest profile path: {profile_path:?}");
                 if let Ok(profile) = read_profile_from_file(profile_path.as_path()) {
+                    debug!("Initialization - read latest profile: {profile:?}");
                     if let Some(window) = profile.window {
                         if let Some(position) = window.position {
                             x_position = f64::from(position.x) / window.scale_factor;
@@ -82,8 +113,11 @@ fn main() {
             }
 
             window_builder = window_builder.inner_size(width, height);
+            debug!("Initializing window size to width: {width}, height: {height}");
+
             if x_position != 0.0 || y_position != 0.0 {
                 window_builder = window_builder.position(x_position, y_position);
+                debug!("Initializing window position to x: {x_position}, y: {y_position}");
             }
 
             // Use custom titlebar on Windows only
@@ -113,15 +147,23 @@ struct Altimeter {
 }
 
 #[tauri::command]
+async fn initialize_datafeed(state: State<'_, Arc<AppState>>) -> Result<(), String> {
+    debug!("Initializing VATSIM datafeed");
+    let new_data = Some(VatsimDataFetch::new(fetch_vatsim_data(&state).await));
+    *state.latest_vatsim_data.lock().unwrap() = new_data;
+    Ok(())
+}
+
+#[tauri::command]
 async fn fetch_metar(
     id: &str,
     state: State<'_, Arc<AppState>>,
 ) -> Result<FetchMetarResponse, String> {
     if let Ok(client) = &state.get_awc_client().await {
-        client
+        let ret = client
             .fetch_metar(id)
             .await
-            .map_err(|e| format!("Error fetching METARs: {e:?}"))
+            .map_err(|e| format!("Error fetching METAR for : {e:?}"))
             .map(|m| FetchMetarResponse {
                 wind_string: m.wind_string(),
                 altimeter: Altimeter {
@@ -129,20 +171,39 @@ async fn fetch_metar(
                     hpa: m.altimeter_hpa(),
                 },
                 metar: m,
-            })
+            });
+
+        match &ret {
+            Ok(_m) => debug!("Successfully retrieved metar for {id}"),
+            Err(e) => debug!("{e:?}"),
+        }
+
+        ret
     } else {
-        Err("AWC Api Client not initialized".to_string())
+        const E: &str = "AWC Api Client not initialized";
+        error!("Fetch Metar Command error: {E}",);
+        Err(E.to_string())
     }
 }
 
 #[tauri::command]
 async fn lookup_station(id: &str, state: State<'_, Arc<AppState>>) -> Result<Station, String> {
+    debug!("Starting Lookup Station Command");
     if let Ok(client) = &state.get_awc_client().await {
-        client
+        let ret = client
             .lookup_station(id)
-            .map_err(|e| format!("Error looking up station {id}: {e:?}"))
+            .map_err(|e| format!("Error looking up station {id}: {e:?}"));
+
+        match &ret {
+            Ok(s) => debug!("Lookup for {id} returned {s:?}"),
+            Err(e) => debug!("Lookup for {id} returned {e}"),
+        }
+
+        ret
     } else {
-        Err("AWC Api Client not initialized".to_string())
+        const E: &str = "AWC Api Client not initialized";
+        error!("Fetch Metar Command error: {E}");
+        Err(E.to_string())
     }
 }
 
@@ -158,6 +219,7 @@ async fn get_atis(
     state: State<'_, Arc<AppState>>,
 ) -> Result<FetchAtisResponse, String> {
     if datafeed_is_stale(&state) {
+        debug!("Datafeed is stale, fetching new data");
         let new_data = Some(VatsimDataFetch::new(fetch_vatsim_data(&state).await));
         *state.latest_vatsim_data.lock().unwrap() = new_data;
     }
@@ -192,7 +254,9 @@ async fn get_atis(
             },
         )
     } else {
-        Err("Could not retrieve datafeed".to_string())
+        const E: &str = "Could not retrieve datafeed";
+        warn!("Get Atis Command error: {E}");
+        Err(E.to_string())
     }
 }
 
@@ -259,6 +323,8 @@ async fn fetch_vatsim_data(
     if let Ok(client) = state.get_vatsim_client().await {
         client.get_v3_data().await.map_err(Into::into)
     } else {
-        Err(anyhow!("VATSIM API client not initialized".to_string()))
+        const E: &str = "VATSIM API client not initialized";
+        error!("Error fetching VATSIM data: {E}");
+        Err(anyhow!(E))
     }
 }

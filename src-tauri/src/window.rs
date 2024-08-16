@@ -2,6 +2,7 @@ use crate::profiles::{default_scale, ProfileWindowState};
 use crate::settings::Settings;
 use crate::MAIN_WINDOW_LABEL;
 use anyhow::anyhow;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, WebviewWindow};
 
@@ -13,7 +14,8 @@ pub enum WindowState {
 }
 
 pub fn get_window_state(app: &AppHandle) -> Option<ProfileWindowState> {
-    app.get_webview_window(MAIN_WINDOW_LABEL)
+    let w = app
+        .get_webview_window(MAIN_WINDOW_LABEL)
         .map(|w| ProfileWindowState {
             state: if w.is_maximized().unwrap_or_default() {
                 WindowState::Maximized
@@ -25,7 +27,10 @@ pub fn get_window_state(app: &AppHandle) -> Option<ProfileWindowState> {
             position: w.outer_position().ok(),
             size: w.outer_size().ok(),
             scale_factor: w.scale_factor().unwrap_or_else(|_| default_scale()),
-        })
+        });
+    debug!("Captured window state: {w:?}");
+
+    w
 }
 
 pub fn apply_window_state(
@@ -35,6 +40,7 @@ pub fn apply_window_state(
     app.get_webview_window(MAIN_WINDOW_LABEL).map_or_else(
         || Err(anyhow!("Could not find main window")),
         |w| {
+            debug!("Applying window state: {window_state:?}");
             match window_state.state {
                 WindowState::FullScreen => w.set_fullscreen(true)?,
                 WindowState::Maximized => w.maximize()?,
@@ -58,8 +64,10 @@ pub fn set_always_on_top_settings_checked(
     always_on_top: bool,
 ) -> Result<(), String> {
     if settings.always_on_top() {
+        debug!("Trying to set always on top to {always_on_top}");
         set_always_on_top(window, always_on_top)
     } else {
+        debug!("Always on top not applied due to settings override");
         Ok(())
     }
 }

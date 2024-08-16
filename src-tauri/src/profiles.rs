@@ -6,6 +6,7 @@ use crate::window::{
     apply_window_state, get_window_state, set_always_on_top_settings_checked, WindowState,
 };
 use crate::{utils, MAIN_WINDOW_LABEL};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Wry};
@@ -25,7 +26,7 @@ pub struct Profile {
     pub units: AltimeterUnits,
 }
 
-fn true_bool() -> bool {
+const fn true_bool() -> bool {
     true
 }
 
@@ -65,6 +66,7 @@ pub fn read_profile_from_file(path: &Path) -> Result<Profile, anyhow::Error> {
 }
 
 fn write_profile_to_file(path: &Path, profile: &Profile) -> Result<(), anyhow::Error> {
+    debug!("Writing profile to {path:?}");
     utils::serialize_to_file(path, profile)
 }
 
@@ -101,6 +103,7 @@ fn profile_dialog_builder(app: &AppHandle) -> FileDialogBuilder<Wry> {
 
 #[tauri::command(async)]
 pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
+    debug!("Starting Load Profile Command");
     let window = app.get_webview_window(MAIN_WINDOW_LABEL);
     let settings = get_appstate_settings(&app).unwrap_or_else(read_settings_or_default);
     set_always_on_top_settings_checked(window.as_ref(), &settings, false)?;
@@ -108,7 +111,7 @@ pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
     let pick_response = profile_dialog_builder(&app).blocking_pick_file();
     let ret = pick_response.map_or_else(
         || Err("Could not pick file".to_string()),
-        |pick| load_profile_from_path(&app, pick.path),
+        |pick| load_profile_from_path(&app, &pick.path),
     );
 
     set_always_on_top_settings_checked(window.as_ref(), &settings, true)?;
@@ -116,10 +119,12 @@ pub fn load_profile(app: AppHandle) -> Result<Profile, String> {
     ret
 }
 
-pub fn load_profile_from_path(app: &AppHandle, path: PathBuf) -> Result<Profile, String> {
-    match read_profile_from_file(&path) {
+pub fn load_profile_from_path(app: &AppHandle, path: &PathBuf) -> Result<Profile, String> {
+    debug!("Starting to load profile from: {path:?}");
+    match read_profile_from_file(path) {
         Ok(profile) => {
-            set_latest_profile_path(app, path.clone());
+            debug!("Found good profile");
+            set_latest_profile_path(app, path);
             if let Some(window) = &profile.window {
                 apply_window_state(app, window).map_err(|e| e.to_string())?;
             }
@@ -131,10 +136,11 @@ pub fn load_profile_from_path(app: &AppHandle, path: PathBuf) -> Result<Profile,
 
 #[tauri::command(async)]
 pub fn save_current_profile(mut profile: Profile, app: AppHandle) -> Result<(), String> {
+    debug!("Starting Save Current Profile Command");
     profile.window = get_window_state(&app);
     let last_profile_path = get_latest_profile_path(&app);
     if let Some(path) = last_profile_path {
-        save_profile(&profile, path, &app)
+        save_profile(&profile, &path, &app)
     } else {
         save_profile_as(profile, app)
     }
@@ -142,6 +148,7 @@ pub fn save_current_profile(mut profile: Profile, app: AppHandle) -> Result<(), 
 
 #[tauri::command(async)]
 pub fn save_profile_as(mut profile: Profile, app: AppHandle) -> Result<(), String> {
+    debug!("Starting Save Current Profile As Command");
     profile.window = get_window_state(&app);
     let window = app.get_webview_window(MAIN_WINDOW_LABEL);
     let settings = get_appstate_settings(&app).unwrap_or_else(read_settings_or_default);
@@ -151,7 +158,7 @@ pub fn save_profile_as(mut profile: Profile, app: AppHandle) -> Result<(), Strin
         .blocking_save_file()
         .map_or_else(
             || Err("Dialog closed without selecting save path".to_string()),
-            |path| save_profile(&profile, path, &app),
+            |path| save_profile(&profile, &path, &app),
         );
 
     set_always_on_top_settings_checked(window.as_ref(), &settings, true)?;
@@ -159,12 +166,17 @@ pub fn save_profile_as(mut profile: Profile, app: AppHandle) -> Result<(), Strin
     ret
 }
 
-fn save_profile(profile: &Profile, path: PathBuf, app: &AppHandle) -> Result<(), String> {
-    match write_profile_to_file(&path, profile) {
+fn save_profile(profile: &Profile, path: &PathBuf, app: &AppHandle) -> Result<(), String> {
+    debug!("Trying to write profile to {:?}", path);
+    match write_profile_to_file(path, profile) {
         Ok(()) => {
+            debug!("Successfully wrote profile: {profile:?}");
             set_latest_profile_path(app, path);
             Ok(())
         }
-        Err(e) => Err(e.to_string()),
+        Err(e) => {
+            debug!("Error writing profile: {e:?}");
+            Err(e.to_string())
+        }
     }
 }

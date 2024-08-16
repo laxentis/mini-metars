@@ -13,8 +13,8 @@ tauri-build = { version = "2.0.0-rc.2", features = [] }
 [dependencies]
 tauri = { version = "2.0.0-rc.2", features = ["default"] }
 tauri-plugin-shell = "2.0.0-rc.0"
-serde = { version = "1.0.206", features = ["derive"] }
-serde_json = "1.0.124"
+serde = { version = "1.0.208", features = ["derive"] }
+serde_json = "1.0.125"
 anyhow = "1.0.86"
 flate2 = "1.0.31"
 reqwest = { version = "0.12.5", features = ["json"] }
@@ -25,6 +25,8 @@ regex = "1.10.6"
 dirs = "5.0.1"
 tauri-plugin-dialog = "2.0.0-rc.0"
 tauri-plugin-os = "2.0.0-rc.0"
+tauri-plugin-log = "2.0.0-rc.0"
+log = "0.4.22"
 
 # Optimize for smaller binary size
 [profile.release]

@@ -2,6 +2,7 @@ use anyhow::{anyhow, bail};
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use flate2::read::GzDecoder;
+use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -134,7 +135,8 @@ impl AviationWeatherCenterApi {
     }
 
     fn sanitize_id(&self, id: &str) -> String {
-        self.stations
+        let ret = self
+            .stations
             .as_ref()
             .map_or(id.to_uppercase(), |stations| {
                 let id_is_state = id.starts_with('@') && id.len() == 3;
@@ -149,7 +151,10 @@ impl AviationWeatherCenterApi {
                 } else {
                     id.to_uppercase()
                 }
-            })
+            });
+        debug!("Sanitized id for {id}: {ret}");
+
+        ret
     }
 }
 
@@ -216,7 +221,7 @@ impl MetarDto {
         (self.altim * MBAR_TO_INHG_FACTOR * 100.0).round() / 100.0
     }
 
-    pub fn altimeter_hpa(&self) -> f64 {
+    pub const fn altimeter_hpa(&self) -> f64 {
         self.altim
     }
 

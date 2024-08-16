@@ -26,7 +26,6 @@ pub struct AppState {
     awc_client: OnceCell<Result<AviationWeatherCenterApi, anyhow::Error>>,
     vatsim_client: OnceCell<Result<Vatsim, VatsimUtilError>>,
     pub latest_vatsim_data: Mutex<Option<VatsimDataFetch>>,
-    //pub last_profile_path: Mutex<Option<PathBuf>>,
     pub settings: Mutex<Option<Settings>>,
 }
 
@@ -37,7 +36,6 @@ impl AppState {
             awc_client: OnceCell::const_new(),
             vatsim_client: OnceCell::const_new(),
             latest_vatsim_data: Mutex::new(None),
-            //last_profile_path: Mutex::new(None),
             settings: Mutex::new(None),
         }
     }

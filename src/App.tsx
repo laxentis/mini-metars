@@ -9,6 +9,7 @@ import { logIfDev } from "./logging.ts";
 import { clsx } from "clsx";
 import { createShortcut, KbdKey } from "@solid-primitives/keyboard";
 import {
+  initializeDatafeedCmd,
   loadProfileCmd,
   loadSettingsInitialCmd,
   Profile,
@@ -217,6 +218,7 @@ function App() {
 
   onMount(async () => {
     let res = await loadSettingsInitialCmd();
+    await initializeDatafeedCmd();
     setSettings(res.settings);
     if (res.profile && settings.loadMostRecentProfileOnOpen) {
       await loadProfile(res.profile!);

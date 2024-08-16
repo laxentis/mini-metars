@@ -120,6 +120,8 @@ const loadSettingsInitialCmd = (): Promise<InitialSettingsLoad> =>
 const saveSettingsCmd = (settings?: Settings): Promise<void> =>
   invoke("save_settings", { settings: settings });
 
+const initializeDatafeedCmd = (): Promise<void> => invoke("initialize_datafeed", {});
+
 export {
   updateMetarCmd,
   lookupStationCmd,
@@ -130,5 +132,6 @@ export {
   loadSettingsCmd,
   loadSettingsInitialCmd,
   saveSettingsCmd,
+  initializeDatafeedCmd,
 };
 export type { CloudLayer, MetarDto, Profile, Settings, InitialSettingsLoad };
