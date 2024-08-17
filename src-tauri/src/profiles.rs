@@ -24,10 +24,16 @@ pub struct Profile {
     pub window: Option<ProfileWindowState>,
     #[serde(default)]
     pub units: AltimeterUnits,
+    #[serde(default = "false_bool")]
+    pub hide_airport_if_missing_atis: bool,
 }
 
 const fn true_bool() -> bool {
     true
+}
+
+const fn false_bool() -> bool {
+    false
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

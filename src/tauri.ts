@@ -75,6 +75,7 @@ interface Profile {
   showTitlebar: boolean;
   window?: Window;
   units: "inHg" | "hPa";
+  hideAirportIfMissingAtis: boolean;
 }
 
 interface Window {
