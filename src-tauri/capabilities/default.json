@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:path:default",
     "core:event:default",
@@ -18,6 +20,7 @@
     "core:window:allow-minimize",
     "shell:allow-open",
     "os:allow-os-type",
-    "log:default"
+    "log:default",
+    "dialog:default"
   ]
 }

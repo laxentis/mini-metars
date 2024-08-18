@@ -8,8 +8,9 @@ use crate::settings::{
     get_appstate_settings, get_latest_profile_path, read_settings_or_default, set_appstate_settings,
 };
 use crate::state::{AppState, VatsimDataFetch};
+use crate::update::check_for_updates;
 use anyhow::anyhow;
-use log::{debug, error, trace, warn};
+use log::{debug, error, info, trace, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, LazyLock};
@@ -23,6 +24,7 @@ mod awc;
 mod profiles;
 mod settings;
 mod state;
+mod update;
 mod utils;
 mod window;
 
@@ -99,6 +101,16 @@ fn main() {
             let mut height = 58.0;
             #[cfg(not(target_os = "windows"))]
             let mut height = 64.0;
+
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                debug!("Starting version update check");
+                let res = check_for_updates(&handle).await;
+                match res {
+                    Ok(()) => {}
+                    Err(e) => info!("Error while checking for updates: {e:?}"),
+                }
+            });
 
             if let Some(profile_path) = get_latest_profile_path(app.handle()) {
                 debug!("Initialization - found latest profile path: {profile_path:?}");

@@ -24,18 +24,22 @@ Clicking on an ATIS letter will toggle visibility of the full VATSIM ATIS text, 
 setting or the wind
 will toggle visibility of the full METAR text (note: only one of the ATIS and METAR full text will be visible at once).
 
-### Visibility controls
+### Visibility and display controls
 
 You can toggle visibility of the titlebar (Windows-only) and the input box with the following shortcuts:
 
 * `Ctrl/Cmd` + `D`: toggle visibility of input box and station delete icons
 * `Ctrl/Cmd` + `B`: toggle visibility of the titlebar (Windows only)
 * `Ctrl/Cmd` + `M`: minimize window
+* `Ctrl/Cmd` + `H`: hide airports that do not have a VATSIM ATIS (only applies and works when in "condensed" view where
+  input box and delete controls are hidden; when those controls are shown, all airports will be shown regardless of this
+  setting and the hotkey will have no effect on the setting)
+* `Ctrl/Cmd` + `U` to toggle between inHg and hPa for altimeter units
 
 ### Profiles
 
 Mini METARs supports loading and saving profiles, which include the list of stations, the size and position of the
-window, and the visibility state (visible or hidden) of the input box and titlebar.
+window, and the visibility and display states outlined in the section above.
 
 By default, Mini METARs will load your last used profile on application startup.
 
@@ -45,8 +49,6 @@ The following shortcuts allow you to work with profiles:
   if the current profile is new
 * `Ctrl/Cmd` + `Shift` + `S`: "save as" current profile
 * `Ctrl/Cmd` + `O`: open profile
-
-Profiles also store the altimeter setting units. Use `Ctrl/Cmd` + `U` to toggle between inHg and hPa.
 
 ## FAQ
 

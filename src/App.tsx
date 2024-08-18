@@ -162,6 +162,15 @@ function App() {
     }
   });
 
+  // Create shortcut to hide airports with missing ATIS
+  createShortcut([CtrlOrCmd, "H"], async () => {
+    if (!mainUi.showInput) {
+      await applyFnAndResize(() => {
+        setMainUi("hideAirportIfMissingAtis", (prev) => !prev);
+      });
+    }
+  });
+
   async function resetWindowHeight() {
     if (containerRef !== undefined) {
       let currentSize = await window.innerSize();
@@ -170,9 +179,8 @@ function App() {
       let scaleFactor = await window.scaleFactor();
       logIfDev("Scale factor", scaleFactor);
       let offset = mainUi.showTitlebar ? (type() === "macos" ? 30 : 24) : 0;
-      await window.setSize(
-        new PhysicalSize(currentSize.width, (containerRef.offsetHeight + offset) * scaleFactor)
-      );
+      let container = Math.max(20, containerRef.offsetHeight);
+      await window.setSize(new PhysicalSize(currentSize.width, (container + offset) * scaleFactor));
     }
   }
 

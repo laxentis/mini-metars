@@ -1,6 +1,6 @@
 {
   "name": "mini-metars",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "",
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "@solid-primitives/autofocus": "^0.0.111",
     "@solid-primitives/keyboard": "^1.2.8",
     "@tauri-apps/api": ">=2.0.0-beta.0",
+    "@tauri-apps/plugin-dialog": "2.0.0-rc.0",
     "@tauri-apps/plugin-log": "2.0.0-rc.0",
     "@tauri-apps/plugin-os": "2.0.0-rc.0",
     "@tauri-apps/plugin-shell": ">=2.0.0-beta.0",
