@@ -53,7 +53,7 @@ function App() {
     showInput: true,
     showTitlebar: true,
     units: "inHg",
-    hideAirportIfMissingAtis: true,
+    hideAirportIfMissingAtis: false,
   });
 
   // Settings store
