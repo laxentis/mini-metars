@@ -284,7 +284,13 @@ fn parse_atis_code(atis: &Atis) -> String {
             // Check for special case that letter in ATIS text has advanced but `atis_code` field has not yet
             if let (Some(c), Some(text_c)) = (code.chars().next(), parse_code_from_text(text_lines))
             {
-                match (text_c as u32) - (c as u32) {
+                trace!(
+                    "Found letters for {}, code: {}, text parse:{}",
+                    atis.callsign,
+                    c,
+                    text_c
+                );
+                match (text_c as i32) - (c as i32) {
                     1 => text_c.to_string(),
                     _ => c.to_string(),
                 }
@@ -301,9 +307,9 @@ fn parse_atis_code(atis: &Atis) -> String {
 }
 
 fn parse_code_from_text(text_lines: &[String]) -> Option<char> {
-    static INFO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"INFO ([A-Z])").unwrap());
+    static INFO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"INFO ([A-Z]) ").unwrap());
     static INFORMATION_REGEX: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"INFORMATION ([A-Z])").unwrap());
+        LazyLock::new(|| Regex::new(r"INFORMATION ([A-Z]) ").unwrap());
 
     let joined = text_lines.join(" ");
     INFO_REGEX.captures(&joined).map_or_else(
