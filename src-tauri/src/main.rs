@@ -29,9 +29,14 @@ mod window;
 const MAIN_WINDOW_LABEL: &str = "main";
 
 fn build_logger<R: Runtime>() -> TauriPlugin<R> {
-    let builder = tauri_plugin_log::Builder::new()
-        .clear_targets()
-        .level(log::LevelFilter::Debug);
+    let builder =
+        tauri_plugin_log::Builder::new()
+            .clear_targets()
+            .level(if cfg!(debug_assertions) {
+                log::LevelFilter::Trace
+            } else {
+                log::LevelFilter::Debug
+            });
 
     #[cfg(not(target_os = "windows"))]
     let builder = builder.target(Target::new(TargetKind::LogDir {
@@ -307,19 +312,53 @@ fn parse_atis_code(atis: &Atis) -> String {
 }
 
 fn parse_code_from_text(text_lines: &[String]) -> Option<char> {
-    static INFO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"INFO ([A-Z]) ").unwrap());
-    static INFORMATION_REGEX: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"INFORMATION ([A-Z]) ").unwrap());
+    static INFO_CHAR_REGEX: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?:INFO|INFORMATION) ([A-Z])(?:\W|$)").unwrap());
+    static INFO_WORD_REGEX: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?:INFO|INFORMATION) ([A-Z]+)(?:\W|$)").unwrap());
 
     let joined = text_lines.join(" ");
-    INFO_REGEX.captures(&joined).map_or_else(
+    INFO_CHAR_REGEX.captures(&joined).map_or_else(
         || {
-            INFORMATION_REGEX
+            INFO_WORD_REGEX
                 .captures(&joined)
-                .and_then(|c| c[1].chars().next())
+                .and_then(|c| nato_to_char(&c[1]))
         },
         |c| c[1].chars().next(),
     )
+}
+
+fn nato_to_char(str: &str) -> Option<char> {
+    match str.to_uppercase().as_str() {
+        "ALPHA" => Some('A'),
+        "BRAVO" => Some('B'),
+        "CHARLIE" => Some('C'),
+        "DELTA" => Some('D'),
+        "ECHO" => Some('E'),
+        "FOXTROT" => Some('F'),
+        "GOLF" => Some('G'),
+        "HOTEL" => Some('H'),
+        "INDIA" => Some('I'),
+        "JULIET" => Some('J'),
+        "KILO" => Some('K'),
+        "LIMA" => Some('L'),
+        "MIKE" => Some('M'),
+        "NOVEMBER" => Some('N'),
+        "OSCAR" => Some('O'),
+        "PAPA" => Some('P'),
+        "QUEBEC" => Some('Q'),
+        "ROMEO" => Some('R'),
+        "SIERRA" => Some('S'),
+        "TANGO" => Some('T'),
+        "UNIFORM" => Some('U'),
+        "VICTOR" => Some('V'),
+        "WHISKEY" => Some('W'),
+        "XRAY" => Some('X'),
+        "X-RAY" => Some('X'),
+        "YANKEE" => Some('Y'),
+        "ZULU" => Some('Z'),
+        _ => None,
+    }
 }
 
 fn datafeed_is_stale(state: &State<'_, Arc<AppState>>) -> bool {
