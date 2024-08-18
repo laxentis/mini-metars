@@ -13,11 +13,13 @@ import { createStore } from "solid-js/store";
 import { MainUiStore } from "./App.tsx";
 import { clsx } from "clsx";
 import { debug, trace, warn } from "@tauri-apps/plugin-log";
+import { DeleteButton } from "./DeleteButton.tsx";
 
 interface MetarProps {
   requestedId: string;
   mainUi: MainUiStore;
   resizeAfterFn: (fn: () => void) => void;
+  deleteOnClick: () => void;
 }
 
 function getRandomInt(min: number, max: number) {
@@ -97,15 +99,17 @@ export const Metar: Component<MetarProps> = (props) => {
       return;
     }
 
-    try {
-      await trace(`Starting ATIS letter fetch for ${icaoId()}`);
-      let res = await updateAtisCmd(icaoId());
-      await trace(`Retrieved ATIS Letter ${res}`);
-      setAtisLetter(res.letter);
-      setAtisTexts(res.texts);
-    } catch (error) {
-      await warn(`Frontend error: ${error}`);
-    }
+    props.resizeAfterFn(async () => {
+      try {
+        await trace(`Starting ATIS letter fetch for ${icaoId()}`);
+        let res = await updateAtisCmd(icaoId());
+        await trace(`Retrieved ATIS Letter ${res}`);
+        setAtisLetter(res.letter);
+        setAtisTexts(res.texts);
+      } catch (error) {
+        await warn(`Frontend error: ${error}`);
+      }
+    });
   };
 
   onMount(async () => {
@@ -173,32 +177,41 @@ export const Metar: Component<MetarProps> = (props) => {
   });
 
   return (
-    <div class="flex flex-col mx-1 select-none cursor-pointer">
-      <div class="flex font-mono text-sm space-x-2.5">
-        <div class="w-8">{displayId()}</div>
-        <div class="w-8 text-center" onClick={toggleShowAtisTexts}>
-          {atisLetter()}
+    <Show
+      when={
+        props.mainUi.showInput || !props.mainUi.hideAirportIfMissingAtis || atisLetter() !== "-"
+      }
+    >
+      <Show when={props.mainUi.showInput}>
+        <DeleteButton onClick={props.deleteOnClick} />
+      </Show>
+      <div class="flex flex-col mx-1 select-none cursor-pointer">
+        <div class="flex font-mono text-sm space-x-2.5">
+          <div class="w-8">{displayId()}</div>
+          <div class="w-8 text-center" onClick={toggleShowAtisTexts}>
+            {atisLetter()}
+          </div>
+          <div
+            class={clsx({
+              "text-center": true,
+              "w-12": props.mainUi.units === "inHg",
+              "w-10": props.mainUi.units === "hPa",
+            })}
+            onClick={toggleShowMetar}
+          >
+            {altimeterString()}
+          </div>
+          <div class="flex-grow" onClick={toggleShowMetar}>
+            {wind()}
+          </div>
         </div>
-        <div
-          class={clsx({
-            "text-center": true,
-            "w-12": props.mainUi.units === "inHg",
-            "w-10": props.mainUi.units === "hPa",
-          })}
-          onClick={toggleShowMetar}
-        >
-          {altimeterString()}
-        </div>
-        <div class="flex-grow" onClick={toggleShowMetar}>
-          {wind()}
-        </div>
+        <Show when={showFullMetar() && rawMetar() !== ""}>
+          <div class={fullTextClass()}>{rawMetar()}</div>
+        </Show>
+        <Show when={showAtisTexts()}>
+          <For each={atisTexts}>{(atisText) => <div class={fullTextClass()}>{atisText}</div>}</For>
+        </Show>
       </div>
-      <Show when={showFullMetar() && rawMetar() !== ""}>
-        <div class={fullTextClass()}>{rawMetar()}</div>
-      </Show>
-      <Show when={showAtisTexts()}>
-        <For each={atisTexts}>{(atisText) => <div class={fullTextClass()}>{atisText}</div>}</For>
-      </Show>
-    </div>
+    </Show>
   );
 };
