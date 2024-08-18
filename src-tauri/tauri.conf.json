@@ -1,6 +1,6 @@
 {
   "productName": "Mini METARs",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "identifier": "org.oakartcc.mini-metars",
   "build": {
     "beforeDevCommand": "pnpm dev",
