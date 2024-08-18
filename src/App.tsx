@@ -20,7 +20,6 @@ import {
 } from "./tauri.ts";
 import { type } from "@tauri-apps/plugin-os";
 import { CustomTitlebar } from "./CustomTitlebar.tsx";
-import { DeleteButton } from "./DeleteButton.tsx";
 import { warn } from "@tauri-apps/plugin-log";
 
 function removeIndex<T>(array: readonly T[], index: number): T[] {
@@ -32,6 +31,7 @@ export interface MainUiStore {
   showInput: boolean;
   showTitlebar: boolean;
   units: "inHg" | "hPa";
+  hideAirportIfMissingAtis: boolean;
 }
 
 function App() {
@@ -53,6 +53,7 @@ function App() {
     showInput: true,
     showTitlebar: true,
     units: "inHg",
+    hideAirportIfMissingAtis: false,
   });
 
   // Settings store
@@ -71,6 +72,7 @@ function App() {
       showTitlebar: mainUi.showTitlebar,
       showInput: mainUi.showInput,
       units: mainUi.units,
+      hideAirportIfMissingAtis: mainUi.hideAirportIfMissingAtis,
     };
   });
 
@@ -189,6 +191,7 @@ function App() {
           setMainUi("showInput", p.showInput);
           setMainUi("showTitlebar", p.showTitlebar);
           setMainUi("units", p.units);
+          setMainUi("hideAirportIfMissingAtis", p.hideAirportIfMissingAtis);
         });
       });
     } else {
@@ -197,6 +200,7 @@ function App() {
         setMainUi("showInput", p.showInput);
         setMainUi("showTitlebar", p.showTitlebar);
         setMainUi("units", p.units);
+        setMainUi("hideAirportIfMissingAtis", p.hideAirportIfMissingAtis);
       });
     }
   }
@@ -244,10 +248,12 @@ function App() {
             <For each={ids}>
               {(id, i) => (
                 <div class="flex">
-                  <Show when={mainUi.showInput}>
-                    <DeleteButton onClick={async () => await removeStation(i())} />
-                  </Show>
-                  <Metar requestedId={id} resizeAfterFn={applyFnAndResize} mainUi={mainUi} />
+                  <Metar
+                    requestedId={id}
+                    resizeAfterFn={applyFnAndResize}
+                    mainUi={mainUi}
+                    deleteOnClick={async () => await removeStation(i())}
+                  />
                 </div>
               )}
             </For>
